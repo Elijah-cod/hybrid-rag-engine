@@ -65,46 +65,6 @@ function slugifySourceId(input: string) {
     .slice(0, 80);
 }
 
-function inferSourceTypeFromName(fileName: string) {
-  const lowerName = fileName.toLowerCase();
-  if (lowerName.endsWith(".md")) {
-    return "notes";
-  }
-  if (lowerName.endsWith(".csv")) {
-    return "data";
-  }
-  if (lowerName.endsWith(".json")) {
-    return "memo";
-  }
-  return "article";
-}
-
-async function extractTextFromFile(file: File) {
-  const rawText = await file.text();
-  const lowerName = file.name.toLowerCase();
-
-  if (lowerName.endsWith(".json")) {
-    try {
-      const parsed = JSON.parse(rawText) as
-        | { text?: unknown; content?: unknown; body?: unknown }
-        | Array<unknown>;
-
-      if (!Array.isArray(parsed)) {
-        const candidate = [parsed.text, parsed.content, parsed.body].find(
-          (value) => typeof value === "string" && value.trim().length > 0
-        );
-        if (typeof candidate === "string") {
-          return candidate;
-        }
-      }
-    } catch {
-      return rawText;
-    }
-  }
-
-  return rawText;
-}
-
 export function DashboardShell() {
   const [messages, setMessages] = useState<ChatMessage[]>(starterMessages);
   const [question, setQuestion] = useState("");
@@ -434,20 +394,46 @@ export function DashboardShell() {
     }
 
     try {
-      const extractedText = (await extractTextFromFile(file)).trim();
-      if (!extractedText) {
-        throw new Error("The selected file did not contain readable text.");
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/extract", {
+        method: "POST",
+        body: formData
+      });
+
+      const payload = (await response.json()) as
+        | {
+            fileName: string;
+            title: string;
+            sourceId: string;
+            sourceType: string;
+            text: string;
+          }
+        | { error?: string };
+
+      if (!response.ok || "error" in payload) {
+        const message =
+          "error" in payload && payload.error ? payload.error : "File extraction failed unexpectedly.";
+        throw new Error(message);
       }
 
-      const inferredTitle = file.name.replace(/\.[^.]+$/, "");
-      setSelectedFileName(file.name);
-      setSourceTitle(inferredTitle);
-      setSourceId(slugifySourceId(inferredTitle) || "uploaded-source");
-      setSourceType(inferSourceTypeFromName(file.name));
-      setDocumentText(extractedText);
+      const successPayload = payload as {
+        fileName: string;
+        title: string;
+        sourceId: string;
+        sourceType: string;
+        text: string;
+      };
+
+      setSelectedFileName(successPayload.fileName);
+      setSourceTitle(successPayload.title);
+      setSourceId(successPayload.sourceId || slugifySourceId(successPayload.title) || "uploaded-source");
+      setSourceType(successPayload.sourceType);
+      setDocumentText(successPayload.text);
       setIngestError(null);
       setStatusVariant("default");
-      setStatusText(`Loaded ${file.name} into the ingestion console.`);
+      setStatusText(`Loaded ${successPayload.fileName} into the ingestion console.`);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not read the selected source file.";
@@ -779,7 +765,7 @@ export function DashboardShell() {
               <div className="file-picker-row">
                 <label className="file-picker">
                   <input
-                    accept=".txt,.md,.csv,.json"
+                    accept=".pdf,.txt,.md,.csv,.json"
                     onChange={(event) => void handleFileSelected(event.target.files?.[0] ?? null)}
                     type="file"
                   />
@@ -788,7 +774,7 @@ export function DashboardShell() {
                 <span className="file-picker-hint">
                   {selectedFileName
                     ? `Loaded: ${selectedFileName}`
-                    : "Supports .txt, .md, .csv, and .json files."}
+                    : "Supports .pdf, .txt, .md, .csv, and .json files."}
                 </span>
               </div>
               <textarea
