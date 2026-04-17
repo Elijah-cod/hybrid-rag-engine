@@ -73,6 +73,12 @@ export type ChatApiResponse = {
   sources: RetrievedSource[];
 };
 
+export type DocumentMatchOptions = {
+  limit?: number;
+  sourceId?: string;
+  sourceType?: string;
+};
+
 export type IngestRequestPayload = {
   sourceId: string;
   title?: string;

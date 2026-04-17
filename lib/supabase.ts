@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { getServerEnv } from "@/lib/env";
 import type {
+  DocumentMatchOptions,
   Entity,
   SourceChunkPreview,
   SourceLibraryDetail,
@@ -31,21 +32,31 @@ export function toPgVector(values: number[]) {
   return `[${values.join(",")}]`;
 }
 
-export async function matchDocuments(embedding: number[], limit = 6) {
+export async function matchDocuments(embedding: number[], options: DocumentMatchOptions = {}) {
   const supabase = getServiceClient();
+  const filter: Record<string, string> = {};
+
+  if (options.sourceId) {
+    filter.sourceId = options.sourceId;
+  }
+
+  if (options.sourceType) {
+    filter.sourceType = options.sourceType;
+  }
+
   const { data, error } = await (supabase as never as {
     rpc: (
       fn: string,
       args: {
         query_embedding: string;
         match_count: number;
-        filter: Record<string, never>;
+        filter: Record<string, string>;
       }
     ) => Promise<{ data: unknown; error: { message: string } | null }>;
   }).rpc("match_documents", {
     query_embedding: toPgVector(embedding),
-    match_count: limit,
-    filter: {}
+    match_count: options.limit ?? 6,
+    filter
   });
 
   if (error) {

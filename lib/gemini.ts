@@ -133,6 +133,7 @@ export async function synthesizeHybridAnswer(input: {
   question: string;
   vectorMatches: VectorMatch[];
   graph: GraphPayload;
+  sourceScope?: string | null;
 }) {
   const env = getServerEnv();
   const evidenceSummary = input.vectorMatches.map((match, index) => ({
@@ -152,6 +153,7 @@ export async function synthesizeHybridAnswer(input: {
     "3. Evidence used",
     "",
     `Question: ${input.question}`,
+    input.sourceScope ? `Scoped source: ${input.sourceScope}` : "",
     "",
     `Vector evidence: ${JSON.stringify(evidenceSummary)}`,
     "",

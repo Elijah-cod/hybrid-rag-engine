@@ -8,8 +8,9 @@ export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { question?: string };
+    const body = (await request.json()) as { question?: string; sourceId?: string | null };
     const question = body.question?.trim();
+    const sourceId = body.sourceId?.trim() || null;
 
     if (!question) {
       return NextResponse.json({ error: "A question is required." }, { status: 400 });
@@ -21,14 +22,18 @@ export async function POST(request: NextRequest) {
     ]);
 
     const [vectorMatches, graph] = await Promise.all([
-      matchDocuments(embedding, 6),
+      matchDocuments(embedding, {
+        limit: 6,
+        sourceId: sourceId || undefined
+      }),
       fetchGraphContext(entityNames)
     ]);
 
     const answer = await synthesizeHybridAnswer({
       question,
       vectorMatches,
-      graph
+      graph,
+      sourceScope: sourceId
     });
 
     const payload: ChatApiResponse = {

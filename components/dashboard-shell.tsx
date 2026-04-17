@@ -128,6 +128,7 @@ export function DashboardShell() {
   const [selectedLibraryDetail, setSelectedLibraryDetail] = useState<SourceLibraryDetail | null>(null);
   const [libraryDetailPending, setLibraryDetailPending] = useState(false);
   const [libraryDetailError, setLibraryDetailError] = useState<string | null>(null);
+  const [activeChatSourceId, setActiveChatSourceId] = useState<string | null>(null);
 
   useEffect(() => {
     startTransition(() => {
@@ -254,7 +255,11 @@ export function DashboardShell() {
     setCooldownUntil(Date.now() + MIN_REQUEST_INTERVAL_MS);
     setNow(Date.now());
     setStatusVariant("default");
-    setStatusText("Retrieving vector context, traversing graph paths, and synthesizing an answer.");
+    setStatusText(
+      activeChatSourceId
+        ? `Retrieving scoped vector context from ${activeChatSourceId}, traversing graph paths, and synthesizing an answer.`
+        : "Retrieving vector context, traversing graph paths, and synthesizing an answer."
+    );
     setMessages((current) => [...current, userMessage]);
 
     try {
@@ -263,7 +268,7 @@ export function DashboardShell() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ question: trimmed })
+        body: JSON.stringify({ question: trimmed, sourceId: activeChatSourceId })
       });
 
       const payload = (await response.json()) as ChatApiResponse | { error?: string };
@@ -290,7 +295,11 @@ export function DashboardShell() {
             sources: successPayload.sources
           }
         ]);
-        setStatusText("Answer ready. The graph panel reflects the retrieved entities and paths.");
+        setStatusText(
+          activeChatSourceId
+            ? `Answer ready using scoped retrieval for ${activeChatSourceId}. The graph panel reflects the retrieved entities and paths.`
+            : "Answer ready. The graph panel reflects the retrieved entities and paths."
+        );
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected error.";
@@ -461,6 +470,18 @@ export function DashboardShell() {
 
           <div className="composer">
             <form className="composer-shell" onSubmit={handleSubmit}>
+              {activeChatSourceId ? (
+                <div className="active-scope">
+                  <span className="badge">Scoped to {activeChatSourceId}</span>
+                  <button
+                    className="ghost-button"
+                    onClick={() => setActiveChatSourceId(null)}
+                    type="button"
+                  >
+                    Remove Scope
+                  </button>
+                </div>
+              ) : null}
               <textarea
                 aria-label="Ask a hybrid retrieval question"
                 onChange={(event) => setQuestion(event.target.value)}
@@ -764,6 +785,23 @@ export function DashboardShell() {
                         <span>
                           {new Date(selectedLibraryDetail.source.latestIngestedAt).toLocaleString()}
                         </span>
+                      </div>
+                      <div className="library-actions">
+                        <button
+                          className="ghost-button"
+                          onClick={() =>
+                            setActiveChatSourceId((current) =>
+                              current === selectedLibraryDetail.source.sourceId
+                                ? null
+                                : selectedLibraryDetail.source.sourceId
+                            )
+                          }
+                          type="button"
+                        >
+                          {activeChatSourceId === selectedLibraryDetail.source.sourceId
+                            ? "Clear Chat Scope"
+                            : "Use In Chat"}
+                        </button>
                       </div>
                     </div>
 

@@ -223,6 +223,13 @@ textarea {
   background: rgba(255, 253, 249, 0.92);
 }
 
+.active-scope {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .composer textarea {
   width: 100%;
   min-height: 96px;
@@ -517,6 +524,11 @@ textarea {
   line-height: 1.55;
 }
 
+.library-actions {
+  display: flex;
+  gap: 12px;
+}
+
 .detail-chunk-card {
   padding: 14px;
   border-radius: 12px;
@@ -712,6 +724,11 @@ textarea {
   }
 
   .composer-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .active-scope {
     flex-direction: column;
     align-items: stretch;
   }

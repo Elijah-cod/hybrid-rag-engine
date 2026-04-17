@@ -43,7 +43,14 @@ begin
     documents.metadata,
     1 - (documents.embedding <=> query_embedding) as similarity
   from public.documents
-  where documents.metadata @> filter
+  where (
+    not (filter ? 'sourceId')
+    or documents.source_id = filter->>'sourceId'
+  )
+  and (
+    not (filter ? 'sourceType')
+    or documents.metadata->>'sourceType' = filter->>'sourceType'
+  )
   order by documents.embedding <=> query_embedding
   limit match_count;
 end;
