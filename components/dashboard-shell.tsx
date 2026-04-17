@@ -172,6 +172,24 @@ export function DashboardShell() {
     [graph]
   );
 
+  const suggestedQuestions = useMemo(() => {
+    if (!selectedLibraryDetail) {
+      return [];
+    }
+
+    const sourceLabel =
+      selectedLibraryDetail.source.title || selectedLibraryDetail.source.sourceId;
+    const entities = selectedLibraryDetail.chunks.flatMap((chunk) => chunk.entityNames).slice(0, 3);
+
+    return [
+      `Summarize the key themes in ${sourceLabel}.`,
+      `Which people, teams, or programs are most connected in ${sourceLabel}?`,
+      entities.length >= 2
+        ? `How is ${entities[0]} related to ${entities[1]} in ${sourceLabel}?`
+        : `What relationships stand out in ${sourceLabel}?`
+    ];
+  }, [selectedLibraryDetail]);
+
   async function loadLibrary() {
     setLibraryPending(true);
     setLibraryError(null);
@@ -416,6 +434,17 @@ export function DashboardShell() {
     setIngestError(null);
     setStatusVariant("default");
     setStatusText(`Loaded demo source "${demoSource.title}" into the ingestion console.`);
+  }
+
+  function applySuggestedQuestion(nextQuestion: string) {
+    setQuestion(nextQuestion);
+    if (selectedLibraryDetail) {
+      setActiveChatSourceId(selectedLibraryDetail.source.sourceId);
+      setStatusVariant("default");
+      setStatusText(
+        `Prepared a scoped question for ${selectedLibraryDetail.source.sourceId}.`
+      );
+    }
   }
 
   return (
@@ -802,6 +831,22 @@ export function DashboardShell() {
                             ? "Clear Chat Scope"
                             : "Use In Chat"}
                         </button>
+                      </div>
+                    </div>
+
+                    <div className="library-detail-card">
+                      <h3>Suggested questions</h3>
+                      <div className="suggestion-list">
+                        {suggestedQuestions.map((suggestion) => (
+                          <button
+                            className="suggestion-button"
+                            key={suggestion}
+                            onClick={() => applySuggestedQuestion(suggestion)}
+                            type="button"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
                       </div>
                     </div>
 

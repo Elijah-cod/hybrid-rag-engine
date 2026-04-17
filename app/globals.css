@@ -529,6 +529,21 @@ textarea {
   gap: 12px;
 }
 
+.suggestion-list {
+  display: grid;
+  gap: 10px;
+}
+
+.suggestion-button {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 248, 239, 0.8);
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
 .detail-chunk-card {
   padding: 14px;
   border-radius: 12px;
