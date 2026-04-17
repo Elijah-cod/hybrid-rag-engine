@@ -228,3 +228,22 @@ export async function getSourceLibraryDetail(sourceId: string) {
     chunks
   } satisfies SourceLibraryDetail;
 }
+
+export async function verifySupabaseConnection() {
+  const supabase = getServiceClient();
+  const { data, error } = await (
+    supabase
+      .from("documents")
+      .select("id")
+      .limit(1) as never as Promise<{
+      data: Array<{ id: string }> | null;
+      error: { message: string } | null;
+    }>
+  );
+
+  if (error) {
+    throw new Error(`Supabase readiness query failed: ${error.message}`);
+  }
+
+  return data?.length ?? 0;
+}

@@ -114,6 +114,7 @@ It creates:
 - `/api/chat` hybrid RAG response route
 - `/api/ingest` server-side ingestion route
 - `/api/health` simple warmup endpoint
+- `/api/readiness` live deployment readiness route
 
 ## Deployment notes
 
@@ -121,6 +122,15 @@ It creates:
 - Do not expose the Neo4j password or Supabase service role key to the client.
 - The dashboard includes a cooldown and pending-state UX to reduce Gemini free-tier rate limit issues.
 - The client pings the backend on load so the first request feels less abrupt during cold starts.
+- Before calling the app "ready", apply the Supabase migration and run the dashboard's Deployment Readiness check or hit `/api/readiness` directly.
+
+## Deployment checklist
+
+1. Set all required environment variables in Vercel.
+2. Apply the Supabase migration.
+3. Deploy the Next.js app.
+4. Open the deployed dashboard and run the Deployment Readiness check.
+5. Confirm all checks return `ok` before validating chat and ingestion flows.
 
 ## Recommended workflow
 

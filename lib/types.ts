@@ -82,6 +82,20 @@ export type DocumentMatchOptions = {
 
 export type RetrievalMode = "hybrid" | "vector" | "graph";
 
+export type ReadinessCheckStatus = "ok" | "warning" | "error";
+
+export type ReadinessCheck = {
+  name: string;
+  status: ReadinessCheckStatus;
+  message: string;
+};
+
+export type ReadinessResponse = {
+  status: "ready" | "degraded" | "not_ready";
+  checkedAt: string;
+  checks: ReadinessCheck[];
+};
+
 export type IngestRequestPayload = {
   sourceId: string;
   title?: string;

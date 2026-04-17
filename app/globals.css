@@ -308,6 +308,70 @@ textarea {
   min-height: 74vh;
 }
 
+.readiness-panel {
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+}
+
+.readiness-grid {
+  display: grid;
+  gap: 16px;
+  padding: 0 24px;
+}
+
+.readiness-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.readiness-list {
+  display: grid;
+  gap: 12px;
+}
+
+.readiness-card {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.readiness-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.readiness-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.readiness-pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.readiness-pill-ok {
+  background: rgba(22, 163, 74, 0.12);
+  color: #166534;
+}
+
+.readiness-pill-warning {
+  background: rgba(217, 119, 6, 0.12);
+  color: #92400e;
+}
+
+.readiness-pill-error {
+  background: rgba(185, 28, 28, 0.12);
+  color: #991b1b;
+}
+
 .ingest-panel {
   padding-bottom: 24px;
   margin-bottom: 24px;
@@ -715,6 +779,10 @@ textarea {
   }
 
   .library-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .readiness-summary {
     grid-template-columns: 1fr;
   }
 

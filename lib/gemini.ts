@@ -101,6 +101,11 @@ export async function embedText(text: string) {
   return values;
 }
 
+export async function verifyGeminiConnection() {
+  const values = await embedText("InsightGraph readiness check.");
+  return values.length;
+}
+
 export async function extractQuestionEntities(question: string) {
   const env = getServerEnv();
   const prompt = [

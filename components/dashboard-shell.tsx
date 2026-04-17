@@ -8,6 +8,7 @@ import type {
   ChatMessage,
   GraphPayload,
   IngestionResult,
+  ReadinessResponse,
   RetrievalMode,
   RetrievedSource,
   SourceLibraryDetail,
@@ -131,6 +132,9 @@ export function DashboardShell() {
   const [libraryDetailError, setLibraryDetailError] = useState<string | null>(null);
   const [activeChatSourceId, setActiveChatSourceId] = useState<string | null>(null);
   const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>("hybrid");
+  const [readiness, setReadiness] = useState<ReadinessResponse | null>(null);
+  const [readinessPending, setReadinessPending] = useState(false);
+  const [readinessError, setReadinessError] = useState<string | null>(null);
 
   useEffect(() => {
     startTransition(() => {
@@ -247,6 +251,33 @@ export function DashboardShell() {
       setLibraryDetailError(message);
     } finally {
       setLibraryDetailPending(false);
+    }
+  }
+
+  async function runReadinessCheck() {
+    setReadinessPending(true);
+    setReadinessError(null);
+
+    try {
+      const response = await fetch("/api/readiness");
+      const payload = (await response.json()) as ReadinessResponse | { error?: string };
+
+      if (!response.ok && !("status" in payload)) {
+        throw new Error(
+          "error" in payload && payload.error ? payload.error : "Readiness check failed unexpectedly."
+        );
+      }
+
+      if (!("status" in payload)) {
+        throw new Error("Readiness response was malformed.");
+      }
+
+      setReadiness(payload);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unexpected readiness check error.";
+      setReadinessError(message);
+    } finally {
+      setReadinessPending(false);
     }
   }
 
@@ -643,6 +674,59 @@ export function DashboardShell() {
             </div>
           </div>
         </aside>
+      </section>
+
+      <section className="panel readiness-panel">
+        <header className="panel-header">
+          <div className="panel-title">
+            <h2>Deployment Readiness</h2>
+            <p>Run live connector checks before you deploy or right after the app goes live.</p>
+          </div>
+          <button className="ghost-button" onClick={() => void runReadinessCheck()} type="button">
+            {readinessPending ? "Checking..." : "Run Readiness Check"}
+          </button>
+        </header>
+
+        <div className="readiness-grid">
+          <div className="readiness-summary">
+            <div className="stat-card">
+              <span>Overall</span>
+              <strong>{readiness?.status ?? "idle"}</strong>
+            </div>
+            <div className="stat-card">
+              <span>Checked</span>
+              <strong>{readiness ? new Date(readiness.checkedAt).toLocaleTimeString() : "--:--"}</strong>
+            </div>
+          </div>
+
+          <div className="readiness-list">
+            {readiness?.checks.length ? (
+              readiness.checks.map((check) => (
+                <div className="readiness-card" key={check.name}>
+                  <div className="readiness-card-header">
+                    <strong>{check.name}</strong>
+                    <span className={`readiness-pill readiness-pill-${check.status}`}>{check.status}</span>
+                  </div>
+                  <p>{check.message}</p>
+                </div>
+              ))
+            ) : (
+              <div className="readiness-card">
+                <p>
+                  Run the readiness check after setting production environment variables and applying the Supabase migration.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {readinessError ? (
+          <div className="footnote">
+            <div className="status-text" data-variant="error">
+              {readinessError}
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <section className="panel ingest-panel">

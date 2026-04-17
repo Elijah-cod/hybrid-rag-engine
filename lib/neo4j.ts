@@ -36,6 +36,21 @@ function getDriver() {
   return cachedDriver;
 }
 
+export async function verifyNeo4jConnection() {
+  const driver = getDriver();
+  await driver.verifyConnectivity();
+
+  const env = getServerEnv();
+  const session = driver.session({ database: env.NEO4J_DATABASE });
+
+  try {
+    const result = await session.run("RETURN 1 AS ok");
+    return result.records[0]?.get("ok") === 1;
+  } finally {
+    await session.close();
+  }
+}
+
 function uniqueBy<T>(items: T[], keyFn: (item: T) => string) {
   const seen = new Set<string>();
   return items.filter((item) => {
