@@ -31,6 +31,30 @@ const initialGraph: GraphPayload = {
   relatedEntities: []
 };
 
+const demoSources = [
+  {
+    sourceId: "project-atlas-brief",
+    title: "Project Atlas Brief",
+    sourceType: "memo",
+    text:
+      "Project Atlas is the internal modernization program sponsored by CEO Maya Chen and owned by the platform strategy team. The 2025 goals emphasize cost efficiency, faster customer onboarding, and a unified knowledge layer across product lines. Atlas depends on the Search Infrastructure group, partners with the Analytics Office, and is expected to reduce support resolution time by 18 percent. VP of Operations Daniel Brooks reviews Atlas milestones with Maya Chen every month."
+  },
+  {
+    sourceId: "northstar-ai-roadmap",
+    title: "Northstar AI Roadmap",
+    sourceType: "article",
+    text:
+      "Northstar AI is a cross-functional initiative connecting the research team, the customer intelligence unit, and the enterprise sales org. CTO Elena Ortiz asked the graph engineering squad to map how customer pain points relate to product roadmap themes. The 2025 roadmap links Northstar AI to Project Atlas because both programs share the same retrieval platform and success metric around answer quality. Enterprise sales director Priya Njeri uses Northstar outputs in quarterly planning."
+  },
+  {
+    sourceId: "ceo-2025-goals",
+    title: "CEO 2025 Goals",
+    sourceType: "notes",
+    text:
+      "CEO Maya Chen set three priorities for 2025: operational efficiency, trusted AI experiences, and clearer executive visibility into strategic programs. Project Atlas supports operational efficiency and trusted AI experiences. Northstar AI supports trusted AI experiences and executive visibility. Daniel Brooks and Elena Ortiz are responsible for reporting progress on their respective programs during the executive review."
+  }
+] as const;
+
 function slugifySourceId(input: string) {
   return input
     .toLowerCase()
@@ -369,6 +393,22 @@ export function DashboardShell() {
     }
   }
 
+  function loadDemoSource(sourceIdToLoad: string) {
+    const demoSource = demoSources.find((source) => source.sourceId === sourceIdToLoad);
+    if (!demoSource) {
+      return;
+    }
+
+    setSourceId(demoSource.sourceId);
+    setSourceTitle(demoSource.title);
+    setSourceType(demoSource.sourceType);
+    setDocumentText(demoSource.text);
+    setSelectedFileName(null);
+    setIngestError(null);
+    setStatusVariant("default");
+    setStatusText(`Loaded demo source "${demoSource.title}" into the ingestion console.`);
+  }
+
   return (
     <main className="page-shell">
       <section className="hero">
@@ -538,6 +578,19 @@ export function DashboardShell() {
 
         <div className="ingest-grid">
           <form className="composer-shell ingest-form" onSubmit={handleIngest}>
+            <div className="preset-strip">
+              {demoSources.map((demoSource) => (
+                <button
+                  className="preset-button"
+                  key={demoSource.sourceId}
+                  onClick={() => loadDemoSource(demoSource.sourceId)}
+                  type="button"
+                >
+                  {demoSource.title}
+                </button>
+              ))}
+            </div>
+
             <div className="field-grid">
               <label className="field">
                 <span>Source ID</span>
