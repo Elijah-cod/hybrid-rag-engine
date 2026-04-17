@@ -95,3 +95,11 @@ export type IngestionResult = {
   entities: string[];
   chunks: IngestionChunkSummary[];
 };
+
+export type SourceLibraryItem = {
+  sourceId: string;
+  title: string | null;
+  sourceType: string | null;
+  chunkCount: number;
+  latestIngestedAt: string;
+};

@@ -264,6 +264,15 @@ textarea {
   cursor: not-allowed;
 }
 
+.ghost-button {
+  padding: 12px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+  cursor: pointer;
+}
+
 .map-panel {
   display: grid;
   grid-template-rows: auto auto 1fr;
@@ -272,6 +281,7 @@ textarea {
 
 .ingest-panel {
   padding-bottom: 24px;
+  margin-bottom: 24px;
 }
 
 .ingest-grid {
@@ -367,6 +377,56 @@ textarea {
   border: 1px solid var(--line);
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+.library-panel {
+  padding-bottom: 24px;
+}
+
+.library-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 0 24px;
+}
+
+.library-card {
+  padding: 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.library-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.library-card-header h3 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+}
+
+.library-card-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.library-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.library-empty {
+  padding: 0 24px 24px;
+  color: var(--muted);
 }
 
 .map-summary {
@@ -495,6 +555,10 @@ textarea {
   }
 
   .ingest-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .library-grid {
     grid-template-columns: 1fr;
   }
 

@@ -8,7 +8,8 @@ import type {
   ChatMessage,
   GraphPayload,
   IngestionResult,
-  RetrievedSource
+  RetrievedSource,
+  SourceLibraryItem
 } from "@/lib/types";
 
 const MIN_REQUEST_INTERVAL_MS = 4_500;
@@ -46,6 +47,9 @@ export function DashboardShell() {
   const [ingestError, setIngestError] = useState<string | null>(null);
   const [ingestResult, setIngestResult] = useState<IngestionResult | null>(null);
   const [latestSources, setLatestSources] = useState<RetrievedSource[]>([]);
+  const [libraryItems, setLibraryItems] = useState<SourceLibraryItem[]>([]);
+  const [libraryPending, setLibraryPending] = useState(false);
+  const [libraryError, setLibraryError] = useState<string | null>(null);
 
   useEffect(() => {
     startTransition(() => {
@@ -59,6 +63,10 @@ export function DashboardShell() {
           setStatusText("Warmup ping failed. The first real request may be slower.");
         });
     });
+  }, []);
+
+  useEffect(() => {
+    void loadLibrary();
   }, []);
 
   useEffect(() => {
@@ -84,6 +92,34 @@ export function DashboardShell() {
     }),
     [graph]
   );
+
+  async function loadLibrary() {
+    setLibraryPending(true);
+    setLibraryError(null);
+
+    try {
+      const response = await fetch("/api/library");
+      const payload = (await response.json()) as
+        | { sources: SourceLibraryItem[] }
+        | { error?: string };
+
+      if (!response.ok || "error" in payload) {
+        const message =
+          "error" in payload && payload.error
+            ? payload.error
+            : "Could not load the source library.";
+        throw new Error(message);
+      }
+
+      const successPayload = payload as { sources: SourceLibraryItem[] };
+      setLibraryItems(successPayload.sources);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unexpected library error.";
+      setLibraryError(message);
+    } finally {
+      setLibraryPending(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -203,6 +239,7 @@ export function DashboardShell() {
 
       const successPayload = payload as IngestionResult;
       setIngestResult(successPayload);
+      void loadLibrary();
       setStatusVariant("default");
       setStatusText(
         `Ingested ${successPayload.chunkCount} chunk${successPayload.chunkCount === 1 ? "" : "s"} into Supabase and Neo4j.`
@@ -488,6 +525,54 @@ export function DashboardShell() {
             {ingestError ? <div className="status-text" data-variant="error">{ingestError}</div> : null}
           </div>
         </div>
+      </section>
+
+      <section className="panel library-panel">
+        <header className="panel-header">
+          <div className="panel-title">
+            <h2>Source Library</h2>
+            <p>Track ingested sources and recent document activity from the Supabase store.</p>
+          </div>
+          <button className="ghost-button" onClick={() => void loadLibrary()} type="button">
+            {libraryPending ? "Refreshing..." : "Refresh Library"}
+          </button>
+        </header>
+
+        <div className="library-grid">
+          {libraryItems.length > 0 ? (
+            libraryItems.map((item) => (
+              <div className="library-card" key={item.sourceId}>
+                <div className="library-card-header">
+                  <div>
+                    <h3>{item.title || item.sourceId}</h3>
+                    <p>{item.sourceId}</p>
+                  </div>
+                  <span className="badge">{item.chunkCount} chunks</span>
+                </div>
+                <div className="library-meta">
+                  <span>{item.sourceType || "unknown type"}</span>
+                  <span>{new Date(item.latestIngestedAt).toLocaleString()}</span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="library-empty">
+              <p>
+                {libraryPending
+                  ? "Loading ingested sources..."
+                  : "No library items yet. Ingest a document and it will appear here."}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {libraryError ? (
+          <div className="footnote">
+            <div className="status-text" data-variant="error">
+              {libraryError}
+            </div>
+          </div>
+        ) : null}
       </section>
     </main>
   );

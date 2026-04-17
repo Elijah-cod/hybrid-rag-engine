@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { getServerEnv } from "@/lib/env";
-import type { Entity, Triplet, VectorMatch } from "@/lib/types";
+import type { Entity, SourceLibraryItem, Triplet, VectorMatch } from "@/lib/types";
 
 let cachedClient: ReturnType<typeof createClient> | null = null;
 
@@ -85,4 +85,52 @@ export async function insertDocumentChunk(input: {
   if (error) {
     throw new Error(`Supabase insert failed: ${error.message}`);
   }
+}
+
+type RawLibraryRow = {
+  source_id: string;
+  title: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export async function listSourceLibrary(limit = 24) {
+  const supabase = getServiceClient();
+  const { data, error } = await (
+    supabase
+      .from("documents")
+      .select("source_id, title, metadata, created_at")
+      .order("created_at", { ascending: false })
+      .limit(limit * 8) as never as Promise<{
+      data: RawLibraryRow[] | null;
+      error: { message: string } | null;
+    }>
+  );
+
+  if (error) {
+    throw new Error(`Supabase library query failed: ${error.message}`);
+  }
+
+  const grouped = new Map<string, SourceLibraryItem>();
+
+  for (const row of data ?? []) {
+    const existing = grouped.get(row.source_id);
+    if (existing) {
+      existing.chunkCount += 1;
+      continue;
+    }
+
+    const sourceType =
+      row.metadata && typeof row.metadata.sourceType === "string" ? row.metadata.sourceType : null;
+
+    grouped.set(row.source_id, {
+      sourceId: row.source_id,
+      title: row.title,
+      sourceType,
+      chunkCount: 1,
+      latestIngestedAt: row.created_at
+    });
+  }
+
+  return Array.from(grouped.values()).slice(0, limit);
 }
