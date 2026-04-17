@@ -77,11 +77,13 @@ export function DashboardShell() {
   const [sourceId, setSourceId] = useState("strategy-memo");
   const [sourceTitle, setSourceTitle] = useState("Strategy Memo");
   const [sourceType, setSourceType] = useState("article");
+  const [articleUrl, setArticleUrl] = useState("");
   const [documentText, setDocumentText] = useState("");
   const [ingesting, setIngesting] = useState(false);
   const [ingestError, setIngestError] = useState<string | null>(null);
   const [ingestResult, setIngestResult] = useState<IngestionResult | null>(null);
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [articleLoading, setArticleLoading] = useState(false);
   const [latestSources, setLatestSources] = useState<RetrievedSource[]>([]);
   const [libraryItems, setLibraryItems] = useState<SourceLibraryItem[]>([]);
   const [libraryPending, setLibraryPending] = useState(false);
@@ -443,6 +445,65 @@ export function DashboardShell() {
     }
   }
 
+  async function handleArticleLoad() {
+    const trimmedUrl = articleUrl.trim();
+    if (!trimmedUrl || articleLoading) {
+      return;
+    }
+
+    setArticleLoading(true);
+    setIngestError(null);
+
+    try {
+      const response = await fetch("/api/extract-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ url: trimmedUrl })
+      });
+
+      const payload = (await response.json()) as
+        | {
+            url: string;
+            title: string;
+            sourceId: string;
+            sourceType: "article";
+            text: string;
+          }
+        | { error?: string };
+
+      if (!response.ok || "error" in payload) {
+        const message =
+          "error" in payload && payload.error ? payload.error : "Article extraction failed unexpectedly.";
+        throw new Error(message);
+      }
+
+      const successPayload = payload as {
+        url: string;
+        title: string;
+        sourceId: string;
+        sourceType: "article";
+        text: string;
+      };
+
+      setSelectedFileName(null);
+      setSourceTitle(successPayload.title);
+      setSourceId(successPayload.sourceId);
+      setSourceType(successPayload.sourceType);
+      setDocumentText(successPayload.text);
+      setStatusVariant("default");
+      setStatusText(`Loaded article content from ${successPayload.url}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not load the article URL.";
+      setIngestError(message);
+      setStatusVariant("error");
+      setStatusText(message);
+    } finally {
+      setArticleLoading(false);
+    }
+  }
+
   function loadDemoSource(sourceIdToLoad: string) {
     const demoSource = demoSources.find((source) => source.sourceId === sourceIdToLoad);
     if (!demoSource) {
@@ -758,6 +819,25 @@ export function DashboardShell() {
                   <option value="notes">Notes</option>
                 </select>
               </label>
+            </div>
+
+            <div className="article-loader">
+              <label className="field">
+                <span>Article URL</span>
+                <input
+                  onChange={(event) => setArticleUrl(event.target.value)}
+                  placeholder="https://example.com/article"
+                  value={articleUrl}
+                />
+              </label>
+              <button
+                className="ghost-button"
+                disabled={articleLoading || !articleUrl.trim()}
+                onClick={() => void handleArticleLoad()}
+                type="button"
+              >
+                {articleLoading ? "Loading Article..." : "Load Article"}
+              </button>
             </div>
 
             <label className="field">

@@ -436,6 +436,13 @@ textarea {
   resize: vertical;
 }
 
+.article-loader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
 .file-picker-row {
   display: flex;
   align-items: center;
@@ -814,6 +821,7 @@ textarea {
 
   .evidence-grid,
   .field-grid,
+  .article-loader,
   .stat-strip,
   .chunk-row {
     grid-template-columns: 1fr;
