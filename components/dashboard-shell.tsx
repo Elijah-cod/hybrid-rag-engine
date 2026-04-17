@@ -9,6 +9,7 @@ import type {
   GraphPayload,
   IngestionResult,
   RetrievedSource,
+  SourceLibraryDetail,
   SourceLibraryItem
 } from "@/lib/types";
 
@@ -99,6 +100,10 @@ export function DashboardShell() {
   const [libraryItems, setLibraryItems] = useState<SourceLibraryItem[]>([]);
   const [libraryPending, setLibraryPending] = useState(false);
   const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [selectedLibrarySourceId, setSelectedLibrarySourceId] = useState<string | null>(null);
+  const [selectedLibraryDetail, setSelectedLibraryDetail] = useState<SourceLibraryDetail | null>(null);
+  const [libraryDetailPending, setLibraryDetailPending] = useState(false);
+  const [libraryDetailError, setLibraryDetailError] = useState<string | null>(null);
 
   useEffect(() => {
     startTransition(() => {
@@ -162,11 +167,41 @@ export function DashboardShell() {
 
       const successPayload = payload as { sources: SourceLibraryItem[] };
       setLibraryItems(successPayload.sources);
+      if (!selectedLibrarySourceId && successPayload.sources.length > 0) {
+        const firstSourceId = successPayload.sources[0].sourceId;
+        setSelectedLibrarySourceId(firstSourceId);
+        void loadLibraryDetail(firstSourceId);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected library error.";
       setLibraryError(message);
     } finally {
       setLibraryPending(false);
+    }
+  }
+
+  async function loadLibraryDetail(sourceIdToLoad: string) {
+    setLibraryDetailPending(true);
+    setLibraryDetailError(null);
+
+    try {
+      const response = await fetch(`/api/library/${encodeURIComponent(sourceIdToLoad)}`);
+      const payload = (await response.json()) as SourceLibraryDetail | { error?: string };
+
+      if (!response.ok || "error" in payload) {
+        const message =
+          "error" in payload && payload.error
+            ? payload.error
+            : "Could not load the selected source detail.";
+        throw new Error(message);
+      }
+
+      setSelectedLibraryDetail(payload as SourceLibraryDetail);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unexpected library detail error.";
+      setLibraryDetailError(message);
+    } finally {
+      setLibraryDetailPending(false);
     }
   }
 
@@ -288,6 +323,8 @@ export function DashboardShell() {
 
       const successPayload = payload as IngestionResult;
       setIngestResult(successPayload);
+      setSelectedLibrarySourceId(successPayload.sourceId);
+      void loadLibraryDetail(successPayload.sourceId);
       void loadLibrary();
       setStatusVariant("default");
       setStatusText(
@@ -634,21 +671,89 @@ export function DashboardShell() {
 
         <div className="library-grid">
           {libraryItems.length > 0 ? (
-            libraryItems.map((item) => (
-              <div className="library-card" key={item.sourceId}>
-                <div className="library-card-header">
-                  <div>
-                    <h3>{item.title || item.sourceId}</h3>
-                    <p>{item.sourceId}</p>
-                  </div>
-                  <span className="badge">{item.chunkCount} chunks</span>
-                </div>
-                <div className="library-meta">
-                  <span>{item.sourceType || "unknown type"}</span>
-                  <span>{new Date(item.latestIngestedAt).toLocaleString()}</span>
-                </div>
+            <>
+              <div className="library-list">
+                {libraryItems.map((item) => (
+                  <button
+                    className={`library-card ${
+                      selectedLibrarySourceId === item.sourceId ? "library-card-active" : ""
+                    }`}
+                    key={item.sourceId}
+                    onClick={() => {
+                      setSelectedLibrarySourceId(item.sourceId);
+                      void loadLibraryDetail(item.sourceId);
+                    }}
+                    type="button"
+                  >
+                    <div className="library-card-header">
+                      <div>
+                        <h3>{item.title || item.sourceId}</h3>
+                        <p>{item.sourceId}</p>
+                      </div>
+                      <span className="badge">{item.chunkCount} chunks</span>
+                    </div>
+                    <div className="library-meta">
+                      <span>{item.sourceType || "unknown type"}</span>
+                      <span>{new Date(item.latestIngestedAt).toLocaleString()}</span>
+                    </div>
+                  </button>
+                ))}
               </div>
-            ))
+
+              <div className="library-detail">
+                {selectedLibraryDetail ? (
+                  <>
+                    <div className="library-detail-card">
+                      <h3>{selectedLibraryDetail.source.title || selectedLibraryDetail.source.sourceId}</h3>
+                      <p>{selectedLibraryDetail.source.sourceId}</p>
+                      <div className="library-meta">
+                        <span>{selectedLibraryDetail.source.sourceType || "unknown type"}</span>
+                        <span>
+                          {new Date(selectedLibraryDetail.source.latestIngestedAt).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="library-detail-card">
+                      <h3>Recent chunks</h3>
+                      <div className="detail-chunk-list">
+                        {selectedLibraryDetail.chunks.map((chunk) => (
+                          <div className="detail-chunk-card" key={chunk.id}>
+                            <div className="detail-chunk-header">
+                              <strong>Chunk {chunk.chunkIndex + 1}</strong>
+                              <span>{new Date(chunk.createdAt).toLocaleString()}</span>
+                            </div>
+                            <p>
+                              {chunk.content.slice(0, 260)}
+                              {chunk.content.length > 260 ? "..." : ""}
+                            </p>
+                            <div>
+                              {chunk.entityNames.length > 0 ? (
+                                chunk.entityNames.map((entityName) => (
+                                  <span className="source-chip" key={`${chunk.id}-${entityName}`}>
+                                    {entityName}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="ingest-muted">No entity names captured for this chunk.</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="library-detail-card">
+                    <p>
+                      {libraryDetailPending
+                        ? "Loading source detail..."
+                        : "Select a source to inspect its latest chunks and extracted entity names."}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
           ) : (
             <div className="library-empty">
               <p>
@@ -664,6 +769,14 @@ export function DashboardShell() {
           <div className="footnote">
             <div className="status-text" data-variant="error">
               {libraryError}
+            </div>
+          </div>
+        ) : null}
+
+        {libraryDetailError ? (
+          <div className="footnote">
+            <div className="status-text" data-variant="error">
+              {libraryDetailError}
             </div>
           </div>
         ) : null}

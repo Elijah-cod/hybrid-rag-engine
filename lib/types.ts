@@ -103,3 +103,16 @@ export type SourceLibraryItem = {
   chunkCount: number;
   latestIngestedAt: string;
 };
+
+export type SourceChunkPreview = {
+  id: string;
+  chunkIndex: number;
+  content: string;
+  createdAt: string;
+  entityNames: string[];
+};
+
+export type SourceLibraryDetail = {
+  source: SourceLibraryItem;
+  chunks: SourceChunkPreview[];
+};

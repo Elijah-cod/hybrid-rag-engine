@@ -1,6 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import { getServerEnv } from "@/lib/env";
-import type { Entity, SourceLibraryItem, Triplet, VectorMatch } from "@/lib/types";
+import type {
+  Entity,
+  SourceChunkPreview,
+  SourceLibraryDetail,
+  SourceLibraryItem,
+  Triplet,
+  VectorMatch
+} from "@/lib/types";
 
 let cachedClient: ReturnType<typeof createClient> | null = null;
 
@@ -133,4 +140,80 @@ export async function listSourceLibrary(limit = 24) {
   }
 
   return Array.from(grouped.values()).slice(0, limit);
+}
+
+type RawDetailRow = {
+  id: string;
+  source_id: string;
+  title: string | null;
+  content: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export async function getSourceLibraryDetail(sourceId: string) {
+  const trimmedSourceId = sourceId.trim();
+  if (!trimmedSourceId) {
+    throw new Error("A sourceId is required to load document details.");
+  }
+
+  const supabase = getServiceClient();
+  const { data, error } = await (
+    supabase
+      .from("documents")
+      .select("id, source_id, title, content, metadata, created_at")
+      .eq("source_id", trimmedSourceId)
+      .order("created_at", { ascending: false })
+      .limit(12) as never as Promise<{
+      data: RawDetailRow[] | null;
+      error: { message: string } | null;
+    }>
+  );
+
+  if (error) {
+    throw new Error(`Supabase detail query failed: ${error.message}`);
+  }
+
+  const firstRow = data?.[0];
+  if (!firstRow) {
+    throw new Error(`No ingested chunks were found for sourceId "${trimmedSourceId}".`);
+  }
+
+  const sourceType =
+    firstRow.metadata && typeof firstRow.metadata.sourceType === "string"
+      ? firstRow.metadata.sourceType
+      : null;
+
+  const chunks: SourceChunkPreview[] = (data ?? []).map((row) => {
+    const chunkIndex =
+      row.metadata && typeof row.metadata.chunkIndex === "number" ? row.metadata.chunkIndex : 0;
+    const entities =
+      row.metadata && Array.isArray(row.metadata.entities) ? row.metadata.entities : [];
+    const entityNames = entities
+      .map((entity) =>
+        entity && typeof entity === "object" && "name" in entity && typeof entity.name === "string"
+          ? entity.name
+          : null
+      )
+      .filter((entityName): entityName is string => Boolean(entityName));
+
+    return {
+      id: row.id,
+      chunkIndex,
+      content: row.content,
+      createdAt: row.created_at,
+      entityNames: entityNames.slice(0, 12)
+    };
+  });
+
+  return {
+    source: {
+      sourceId: firstRow.source_id,
+      title: firstRow.title,
+      sourceType,
+      chunkCount: chunks.length,
+      latestIngestedAt: firstRow.created_at
+    },
+    chunks
+  } satisfies SourceLibraryDetail;
 }
