@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, startTransition, useEffect, useMemo, useState } from "react";
+import { FormEvent, startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { KnowledgeMap } from "@/components/knowledge-map";
 import type {
@@ -55,6 +55,12 @@ const demoSources = [
     text:
       "CEO Maya Chen set three priorities for 2025: operational efficiency, trusted AI experiences, and clearer executive visibility into strategic programs. Project Atlas supports operational efficiency and trusted AI experiences. Northstar AI supports trusted AI experiences and executive visibility. Daniel Brooks and Elena Ortiz are responsible for reporting progress on their respective programs during the executive review."
   }
+] as const;
+
+const deploymentChecklist = [
+  "Set production environment variables in Vercel and Supabase.",
+  "Apply the Supabase documents migration before the first deploy.",
+  "Run the readiness check and confirm all connectors return ok."
 ] as const;
 
 function slugifySourceId(input: string) {
@@ -114,10 +120,6 @@ export function DashboardShell() {
   }, []);
 
   useEffect(() => {
-    void loadLibrary();
-  }, []);
-
-  useEffect(() => {
     if (cooldownUntil <= now) {
       return;
     }
@@ -141,6 +143,24 @@ export function DashboardShell() {
     [graph]
   );
 
+  const readinessStateLabel = useMemo(() => {
+    if (readinessPending) {
+      return "Checking connectors";
+    }
+    if (readiness?.status === "ready") {
+      return "Ready for deployment";
+    }
+    if (readiness?.status === "degraded") {
+      return "Needs connector review";
+    }
+    if (readiness?.status === "not_ready") {
+      return "Blocked by setup";
+    }
+    return "Pending verification";
+  }, [readiness, readinessPending]);
+
+  const latestIngestLabel = ingestResult?.title || ingestResult?.sourceId || "No source seeded yet";
+
   const suggestedQuestions = useMemo(() => {
     if (!selectedLibraryDetail) {
       return [];
@@ -159,7 +179,7 @@ export function DashboardShell() {
     ];
   }, [selectedLibraryDetail]);
 
-  async function loadLibrary() {
+  const loadLibrary = useCallback(async () => {
     setLibraryPending(true);
     setLibraryError(null);
 
@@ -179,10 +199,18 @@ export function DashboardShell() {
 
       const successPayload = payload as { sources: SourceLibraryItem[] };
       setLibraryItems(successPayload.sources);
-      if (!selectedLibrarySourceId && successPayload.sources.length > 0) {
-        const firstSourceId = successPayload.sources[0].sourceId;
-        setSelectedLibrarySourceId(firstSourceId);
-        void loadLibraryDetail(firstSourceId);
+      let nextSelectedSourceId: string | null = null;
+      setSelectedLibrarySourceId((current) => {
+        if (current || successPayload.sources.length === 0) {
+          return current;
+        }
+
+        nextSelectedSourceId = successPayload.sources[0].sourceId;
+        return nextSelectedSourceId;
+      });
+
+      if (nextSelectedSourceId) {
+        void loadLibraryDetail(nextSelectedSourceId);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected library error.";
@@ -190,7 +218,15 @@ export function DashboardShell() {
     } finally {
       setLibraryPending(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadLibrary();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadLibrary]);
 
   async function loadLibraryDetail(sourceIdToLoad: string) {
     setLibraryDetailPending(true);
@@ -546,27 +582,104 @@ export function DashboardShell() {
 
   return (
     <main className="page-shell">
-      <section className="hero">
-        <div className="hero-eyebrow">Hybrid RAG Dashboard</div>
-        <h1>InsightGraph connects context to structure.</h1>
-        <p>
-          Semantic chunks explain what matters. Graph relationships reveal how ideas,
-          people, and projects connect. This workspace lets both retrieval paths show up
-          side by side so answers feel inspectable instead of magical.
-        </p>
-        <div className="top-controls">
-          <button
-            className={`mode-button ${useMockAi ? "mode-button-active" : ""}`}
-            onClick={() => setUseMockAi((current) => !current)}
-            type="button"
-          >
-            {useMockAi ? "Mock AI On" : "Mock AI Off"}
-          </button>
-          <span className="composer-hint">
-            {useMockAi
-              ? "Mock AI mode skips live Gemini calls so you can explore the app without quota."
-              : "Live AI mode uses your Gemini key for ingestion and chat."}
-          </span>
+      <section className="panel hero hero-panel">
+        <div className="hero-grid">
+          <div className="hero-copy">
+            <div className="hero-eyebrow">Hybrid RAG Dashboard</div>
+            <h1>InsightGraph connects context to structure.</h1>
+            <p>
+              Semantic chunks explain what matters. Graph relationships reveal how ideas,
+              people, and projects connect. This workspace lets both retrieval paths show up
+              side by side so answers feel inspectable instead of magical.
+            </p>
+
+            <div className="hero-actions">
+              <div className="mode-strip">
+                <button
+                  className={`mode-button ${!useMockAi ? "mode-button-active" : ""}`}
+                  onClick={() => setUseMockAi(false)}
+                  type="button"
+                >
+                  Live AI
+                </button>
+                <button
+                  className={`mode-button ${useMockAi ? "mode-button-active" : ""}`}
+                  onClick={() => setUseMockAi(true)}
+                  type="button"
+                >
+                  Mock AI
+                </button>
+              </div>
+              <a className="ghost-button" href="#readiness">
+                Review Deployment
+              </a>
+              <a className="ghost-button" href="#ingestion">
+                Seed Sample Data
+              </a>
+            </div>
+
+            <div className="hero-support">
+              {useMockAi
+                ? "Mock AI mode skips live Gemini calls so you can explore ingestion, retrieval, and the knowledge map without burning quota."
+                : "Live AI mode uses your Gemini key for ingestion, semantic search embeddings, and final answer synthesis."}
+            </div>
+          </div>
+
+          <div className="hero-rail">
+            <div className="hero-card">
+              <span className="section-kicker">Operating mode</span>
+              <h2>{useMockAi ? "Quota-safe exploration" : "Production connector path"}</h2>
+              <p>
+                {useMockAi
+                  ? "Best for demos, local UX review, and walkthroughs while Gemini quota is limited."
+                  : "Best for end-to-end validation against Gemini, Supabase pgvector, and Neo4j AuraDB."}
+              </p>
+              <div className="hero-chip-row">
+                <span className="source-chip">Retrieval: {retrievalMode}</span>
+                <span className="source-chip">
+                  Scope: {activeChatSourceId ? activeChatSourceId : "all sources"}
+                </span>
+              </div>
+            </div>
+
+            <div className="hero-card">
+              <span className="section-kicker">Deployment runway</span>
+              <h2>{readinessStateLabel}</h2>
+              <p>
+                The app is already structured for deployment. This final stretch is about
+                validating connectors, confirming environment variables, and shipping with confidence.
+              </p>
+              <div className="checklist">
+                {deploymentChecklist.map((item) => (
+                  <div className="checklist-row" key={item}>
+                    <span className="checklist-mark" aria-hidden="true">
+                      {readiness?.status === "ready" ? "✓" : "•"}
+                    </span>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="hero-metrics">
+          <div className="stat-card stat-card-highlight">
+            <span>Sources in library</span>
+            <strong>{libraryItems.length}</strong>
+          </div>
+          <div className="stat-card">
+            <span>Connector status</span>
+            <strong>{readiness?.status ?? "idle"}</strong>
+          </div>
+          <div className="stat-card">
+            <span>Chat scope</span>
+            <strong>{activeChatSourceId ?? "all"}</strong>
+          </div>
+          <div className="stat-card">
+            <span>Latest ingest</span>
+            <strong>{latestIngestLabel}</strong>
+          </div>
         </div>
       </section>
 
@@ -740,7 +853,7 @@ export function DashboardShell() {
         </aside>
       </section>
 
-      <section className="panel readiness-panel">
+      <section className="panel readiness-panel" id="readiness">
         <header className="panel-header">
           <div className="panel-title">
             <h2>Deployment Readiness</h2>
@@ -793,7 +906,7 @@ export function DashboardShell() {
         ) : null}
       </section>
 
-      <section className="panel ingest-panel">
+      <section className="panel ingest-panel" id="ingestion">
         <header className="panel-header">
           <div className="panel-title">
             <h2>Ingestion Console</h2>

@@ -3,7 +3,7 @@ import { z } from "zod";
 const serverEnvSchema = z.object({
   GOOGLE_AI_API_KEY: z.string().min(1),
   GOOGLE_TEXT_MODEL: z.string().min(1).default("gemini-2.0-flash"),
-  GOOGLE_EMBEDDING_MODEL: z.string().min(1).default("text-embedding-004"),
+  GOOGLE_EMBEDDING_MODEL: z.string().min(1).default("gemini-embedding-001"),
   NEO4J_URI: z.string().url(),
   NEO4J_USERNAME: z.string().min(1),
   NEO4J_PASSWORD: z.string().min(1),

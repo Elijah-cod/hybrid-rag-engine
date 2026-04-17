@@ -3,14 +3,17 @@
   --bg-strong: #efe4d2;
   --panel: rgba(255, 251, 245, 0.9);
   --panel-strong: rgba(255, 247, 235, 0.95);
+  --panel-elevated: rgba(255, 252, 247, 0.96);
   --ink: #20160f;
   --muted: #665b52;
   --line: rgba(50, 34, 20, 0.12);
   --accent: #0f766e;
   --accent-soft: rgba(15, 118, 110, 0.14);
   --accent-strong: #14532d;
+  --gold: #b7791f;
   --danger: #b91c1c;
   --shadow: 0 30px 80px rgba(60, 35, 10, 0.12);
+  --shadow-soft: 0 14px 32px rgba(60, 35, 10, 0.08);
   --radius-xl: 28px;
   --radius-lg: 20px;
   --radius-md: 16px;
@@ -30,11 +33,13 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
-    radial-gradient(circle at 85% 10%, rgba(245, 158, 11, 0.14), transparent 20%),
-    linear-gradient(135deg, #f8f2e7 0%, #efe6d8 42%, #f5efe4 100%);
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.16), transparent 28%),
+    radial-gradient(circle at 85% 10%, rgba(245, 158, 11, 0.16), transparent 22%),
+    radial-gradient(circle at 50% 100%, rgba(20, 83, 45, 0.08), transparent 26%),
+    linear-gradient(135deg, #faf4ea 0%, #f2e7d7 40%, #f5efe4 100%);
   color: var(--ink);
   font-family: var(--font-body);
+  background-attachment: fixed;
 }
 
 a {
@@ -51,19 +56,30 @@ textarea {
 .page-shell {
   min-height: 100vh;
   padding: 32px;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 .hero {
   display: grid;
-  gap: 12px;
+  gap: 24px;
   margin-bottom: 24px;
 }
 
-.top-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
+.hero-panel {
+  padding: 28px;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.85fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.hero-copy {
+  display: grid;
+  gap: 16px;
 }
 
 .hero-eyebrow {
@@ -74,6 +90,13 @@ textarea {
   border: 1px solid rgba(50, 34, 20, 0.1);
   font-size: 0.9rem;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.section-kicker {
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
 }
@@ -92,6 +115,78 @@ textarea {
   font-size: 1.04rem;
   line-height: 1.65;
   color: var(--muted);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.hero-support {
+  max-width: 54rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.hero-rail {
+  display: grid;
+  gap: 16px;
+}
+
+.hero-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 250, 242, 0.74)),
+    rgba(255, 255, 255, 0.55);
+  box-shadow: var(--shadow-soft);
+}
+
+.hero-card h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.hero-card p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.hero-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.checklist {
+  display: grid;
+  gap: 10px;
+}
+
+.checklist-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.checklist-mark {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+.hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .dashboard-grid {
@@ -115,7 +210,9 @@ textarea {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent 32%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.44), transparent 34%),
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 24%);
   pointer-events: none;
 }
 
@@ -156,6 +253,7 @@ textarea {
   color: var(--accent-strong);
   font-size: 0.88rem;
   white-space: nowrap;
+  border: 1px solid rgba(15, 118, 110, 0.08);
 }
 
 .messages {
@@ -171,6 +269,7 @@ textarea {
   border-radius: 22px;
   border: 1px solid transparent;
   line-height: 1.6;
+  box-shadow: var(--shadow-soft);
 }
 
 .message-user {
@@ -212,7 +311,7 @@ textarea {
   padding: 8px 10px;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.82);
   color: var(--muted);
   font-size: 0.88rem;
 }
@@ -227,7 +326,10 @@ textarea {
   padding: 18px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: rgba(255, 253, 249, 0.92);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 251, 245, 0.92)),
+    rgba(255, 253, 249, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 .mode-strip {
@@ -244,12 +346,25 @@ textarea {
   color: var(--ink);
   cursor: pointer;
   text-transform: capitalize;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
 }
 
 .mode-button-active {
   background: rgba(15, 118, 110, 0.1);
   border-color: rgba(15, 118, 110, 0.3);
   color: var(--accent-strong);
+}
+
+.mode-button:hover,
+.ghost-button:hover,
+.preset-button:hover,
+.library-card:hover,
+.suggestion-button:hover,
+.submit-button:hover:enabled {
+  transform: translateY(-1px);
 }
 
 .active-scope {
@@ -304,9 +419,13 @@ textarea {
   padding: 12px 18px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.78);
   color: var(--ink);
   cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
 }
 
 .map-panel {
@@ -341,7 +460,7 @@ textarea {
   padding: 16px;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.74);
 }
 
 .readiness-card p {
@@ -408,6 +527,10 @@ textarea {
   background: rgba(255, 255, 255, 0.72);
   color: var(--ink);
   cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
 }
 
 .field-grid {
@@ -502,7 +625,7 @@ textarea {
   padding: 16px;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.74);
 }
 
 .ingest-card h3 {
@@ -559,14 +682,21 @@ textarea {
   padding: 18px;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.74);
   text-align: left;
   cursor: pointer;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background 140ms ease;
 }
 
 .library-card-active {
   border-color: rgba(15, 118, 110, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.15);
+  box-shadow:
+    inset 0 0 0 1px rgba(15, 118, 110, 0.15),
+    var(--shadow-soft);
 }
 
 .library-card-header {
@@ -610,7 +740,7 @@ textarea {
   padding: 18px;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.74);
 }
 
 .library-detail-card h3 {
@@ -642,6 +772,10 @@ textarea {
   color: var(--ink);
   cursor: pointer;
   text-align: left;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
 }
 
 .detail-chunk-card {
@@ -673,7 +807,7 @@ textarea {
 .stat-card {
   padding: 14px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.72);
   border: 1px solid var(--line);
 }
 
@@ -686,6 +820,14 @@ textarea {
 
 .stat-card strong {
   font-size: 1.5rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.stat-card-highlight {
+  background:
+    linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(255, 255, 255, 0.72)),
+    rgba(255, 255, 255, 0.72);
 }
 
 .map-shell {
@@ -710,7 +852,7 @@ textarea {
   padding: 16px;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.74);
 }
 
 .evidence-card h3 {
@@ -729,7 +871,7 @@ textarea {
   padding: 12px;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: rgba(255, 248, 239, 0.8);
+  background: rgba(255, 248, 239, 0.9);
 }
 
 .path-card strong,
@@ -777,17 +919,25 @@ textarea {
 .status-text {
   color: var(--muted);
   font-size: 0.9rem;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(50, 34, 20, 0.08);
 }
 
 .status-text[data-variant="error"] {
   color: var(--danger);
+  background: rgba(255, 240, 240, 0.82);
+  border-color: rgba(185, 28, 28, 0.12);
 }
 
 @media (max-width: 1080px) {
+  .hero-grid,
   .dashboard-grid {
     grid-template-columns: 1fr;
   }
 
+  .hero-metrics,
   .ingest-grid {
     grid-template-columns: 1fr;
   }
@@ -811,6 +961,10 @@ textarea {
     padding: 18px;
   }
 
+  .hero-panel {
+    padding: 20px;
+  }
+
   .panel-header,
   .messages,
   .composer,
@@ -826,6 +980,8 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .hero-actions,
+  .hero-metrics,
   .evidence-grid,
   .field-grid,
   .article-loader,
@@ -855,6 +1011,11 @@ textarea {
 
   .top-controls {
     align-items: stretch;
+  }
+
+  .hero-actions .ghost-button,
+  .hero-actions .mode-strip {
+    width: 100%;
   }
 
   .submit-button {

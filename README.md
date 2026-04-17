@@ -55,18 +55,35 @@ cp .env.example .env.local
 
 3. Fill in your secrets in `.env.local`.
 
+Recommended starting values:
+
+```bash
+GOOGLE_TEXT_MODEL=gemini-2.0-flash
+GOOGLE_EMBEDDING_MODEL=gemini-embedding-001
+```
+
 4. Run the app:
 
 ```bash
 npm run dev
 ```
 
-5. Start Supabase locally if you want to run the Edge Function:
+5. Open [http://localhost:3000](http://localhost:3000).
+
+6. Start Supabase locally if you want to run the Edge Function:
 
 ```bash
 supabase start
 supabase functions serve ingest-documents --env-file supabase/.env.local
 ```
+
+## Exploring without Gemini quota
+
+- Turn on `Mock AI` in the dashboard header.
+- Use the demo source presets in the Ingestion Console to seed sample documents.
+- Ask questions in `hybrid`, `vector`, or `graph` mode to inspect how the UI behaves without live Gemini calls.
+
+Mock AI keeps the Supabase and Neo4j flow intact, but replaces live Gemini extraction, embeddings, and answer synthesis with deterministic local logic so the app remains explorable when quota is tight.
 
 ## Required environment variables
 
@@ -116,6 +133,16 @@ It creates:
 - `/api/health` simple warmup endpoint
 - `/api/readiness` live deployment readiness route
 
+## Pre-deployment verification
+
+Run the same checks locally before pushing:
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+```
+
 ## Deployment notes
 
 - Keep all secrets in Vercel and Supabase environment variables.
@@ -128,9 +155,11 @@ It creates:
 
 1. Set all required environment variables in Vercel.
 2. Apply the Supabase migration.
-3. Deploy the Next.js app.
+3. Deploy the Next.js app to Vercel.
 4. Open the deployed dashboard and run the Deployment Readiness check.
-5. Confirm all checks return `ok` before validating chat and ingestion flows.
+5. Ingest one sample source and confirm it appears in Source Library.
+6. Validate one chat request in `hybrid` mode and inspect the Knowledge Map.
+7. Confirm all checks return `ok` before calling the deployment production-ready.
 
 ## Recommended workflow
 
