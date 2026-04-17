@@ -328,6 +328,42 @@ textarea {
   resize: vertical;
 }
 
+.file-picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px dashed var(--line);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.file-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--accent-strong);
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.file-picker input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.file-picker-hint {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 .ingest-results {
   display: grid;
   gap: 14px;
@@ -593,6 +629,11 @@ textarea {
   .stat-strip,
   .chunk-row {
     grid-template-columns: 1fr;
+  }
+
+  .file-picker-row {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .map-shell {

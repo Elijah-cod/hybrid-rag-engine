@@ -30,6 +30,54 @@ const initialGraph: GraphPayload = {
   relatedEntities: []
 };
 
+function slugifySourceId(input: string) {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+function inferSourceTypeFromName(fileName: string) {
+  const lowerName = fileName.toLowerCase();
+  if (lowerName.endsWith(".md")) {
+    return "notes";
+  }
+  if (lowerName.endsWith(".csv")) {
+    return "data";
+  }
+  if (lowerName.endsWith(".json")) {
+    return "memo";
+  }
+  return "article";
+}
+
+async function extractTextFromFile(file: File) {
+  const rawText = await file.text();
+  const lowerName = file.name.toLowerCase();
+
+  if (lowerName.endsWith(".json")) {
+    try {
+      const parsed = JSON.parse(rawText) as
+        | { text?: unknown; content?: unknown; body?: unknown }
+        | Array<unknown>;
+
+      if (!Array.isArray(parsed)) {
+        const candidate = [parsed.text, parsed.content, parsed.body].find(
+          (value) => typeof value === "string" && value.trim().length > 0
+        );
+        if (typeof candidate === "string") {
+          return candidate;
+        }
+      }
+    } catch {
+      return rawText;
+    }
+  }
+
+  return rawText;
+}
+
 export function DashboardShell() {
   const [messages, setMessages] = useState<ChatMessage[]>(starterMessages);
   const [question, setQuestion] = useState("");
@@ -46,6 +94,7 @@ export function DashboardShell() {
   const [ingesting, setIngesting] = useState(false);
   const [ingestError, setIngestError] = useState<string | null>(null);
   const [ingestResult, setIngestResult] = useState<IngestionResult | null>(null);
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [latestSources, setLatestSources] = useState<RetrievedSource[]>([]);
   const [libraryItems, setLibraryItems] = useState<SourceLibraryItem[]>([]);
   const [libraryPending, setLibraryPending] = useState(false);
@@ -254,6 +303,35 @@ export function DashboardShell() {
     }
   }
 
+  async function handleFileSelected(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    try {
+      const extractedText = (await extractTextFromFile(file)).trim();
+      if (!extractedText) {
+        throw new Error("The selected file did not contain readable text.");
+      }
+
+      const inferredTitle = file.name.replace(/\.[^.]+$/, "");
+      setSelectedFileName(file.name);
+      setSourceTitle(inferredTitle);
+      setSourceId(slugifySourceId(inferredTitle) || "uploaded-source");
+      setSourceType(inferSourceTypeFromName(file.name));
+      setDocumentText(extractedText);
+      setIngestError(null);
+      setStatusVariant("default");
+      setStatusText(`Loaded ${file.name} into the ingestion console.`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not read the selected source file.";
+      setIngestError(message);
+      setStatusVariant("error");
+      setStatusText(message);
+    }
+  }
+
   return (
     <main className="page-shell">
       <section className="hero">
@@ -436,6 +514,7 @@ export function DashboardShell() {
                 <span>Source type</span>
                 <select onChange={(event) => setSourceType(event.target.value)} value={sourceType}>
                   <option value="article">Article</option>
+                  <option value="data">Data</option>
                   <option value="pdf">PDF</option>
                   <option value="memo">Memo</option>
                   <option value="notes">Notes</option>
@@ -445,6 +524,21 @@ export function DashboardShell() {
 
             <label className="field">
               <span>Raw text</span>
+              <div className="file-picker-row">
+                <label className="file-picker">
+                  <input
+                    accept=".txt,.md,.csv,.json"
+                    onChange={(event) => void handleFileSelected(event.target.files?.[0] ?? null)}
+                    type="file"
+                  />
+                  Load source file
+                </label>
+                <span className="file-picker-hint">
+                  {selectedFileName
+                    ? `Loaded: ${selectedFileName}`
+                    : "Supports .txt, .md, .csv, and .json files."}
+                </span>
+              </div>
               <textarea
                 aria-label="Raw document text for ingestion"
                 onChange={(event) => setDocumentText(event.target.value)}
