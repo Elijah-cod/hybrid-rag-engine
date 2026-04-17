@@ -2,15 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { embedText, extractQuestionEntities, synthesizeHybridAnswer } from "@/lib/gemini";
 import { fetchGraphContext } from "@/lib/neo4j";
 import { matchDocuments } from "@/lib/supabase";
-import type { ChatApiResponse } from "@/lib/types";
+import type { ChatApiResponse, GraphPayload, RetrievalMode } from "@/lib/types";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as { question?: string; sourceId?: string | null };
+    const body = (await request.json()) as {
+      question?: string;
+      sourceId?: string | null;
+      retrievalMode?: RetrievalMode;
+    };
     const question = body.question?.trim();
     const sourceId = body.sourceId?.trim() || null;
+    const retrievalMode = body.retrievalMode || "hybrid";
 
     if (!question) {
       return NextResponse.json({ error: "A question is required." }, { status: 400 });
@@ -21,24 +26,38 @@ export async function POST(request: NextRequest) {
       extractQuestionEntities(question)
     ]);
 
-    const [vectorMatches, graph] = await Promise.all([
-      matchDocuments(embedding, {
-        limit: 6,
-        sourceId: sourceId || undefined
-      }),
-      fetchGraphContext(entityNames)
-    ]);
+    const vectorPromise =
+      retrievalMode === "graph"
+        ? Promise.resolve([])
+        : matchDocuments(embedding, {
+            limit: 6,
+            sourceId: sourceId || undefined
+          });
+
+    const graphPromise: Promise<GraphPayload> =
+      retrievalMode === "vector"
+        ? Promise.resolve({
+            nodes: [],
+            links: [],
+            paths: [],
+            relatedEntities: []
+          })
+        : fetchGraphContext(entityNames);
+
+    const [vectorMatches, graph] = await Promise.all([vectorPromise, graphPromise]);
 
     const answer = await synthesizeHybridAnswer({
       question,
       vectorMatches,
       graph,
-      sourceScope: sourceId
+      sourceScope: sourceId,
+      retrievalMode
     });
 
     const payload: ChatApiResponse = {
       answer,
       graph,
+      retrievalMode,
       sources: vectorMatches.map((match) => ({
         id: match.id,
         sourceId: match.source_id,

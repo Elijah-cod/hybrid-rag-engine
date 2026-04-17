@@ -71,6 +71,7 @@ export type ChatApiResponse = {
   answer: string;
   graph: GraphPayload;
   sources: RetrievedSource[];
+  retrievalMode: RetrievalMode;
 };
 
 export type DocumentMatchOptions = {
@@ -78,6 +79,8 @@ export type DocumentMatchOptions = {
   sourceId?: string;
   sourceType?: string;
 };
+
+export type RetrievalMode = "hybrid" | "vector" | "graph";
 
 export type IngestRequestPayload = {
   sourceId: string;

@@ -223,6 +223,28 @@ textarea {
   background: rgba(255, 253, 249, 0.92);
 }
 
+.mode-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mode-button {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--ink);
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.mode-button-active {
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.3);
+  color: var(--accent-strong);
+}
+
 .active-scope {
   display: flex;
   align-items: center;

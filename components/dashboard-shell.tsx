@@ -8,6 +8,7 @@ import type {
   ChatMessage,
   GraphPayload,
   IngestionResult,
+  RetrievalMode,
   RetrievedSource,
   SourceLibraryDetail,
   SourceLibraryItem
@@ -129,6 +130,7 @@ export function DashboardShell() {
   const [libraryDetailPending, setLibraryDetailPending] = useState(false);
   const [libraryDetailError, setLibraryDetailError] = useState<string | null>(null);
   const [activeChatSourceId, setActiveChatSourceId] = useState<string | null>(null);
+  const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>("hybrid");
 
   useEffect(() => {
     startTransition(() => {
@@ -275,8 +277,8 @@ export function DashboardShell() {
     setStatusVariant("default");
     setStatusText(
       activeChatSourceId
-        ? `Retrieving scoped vector context from ${activeChatSourceId}, traversing graph paths, and synthesizing an answer.`
-        : "Retrieving vector context, traversing graph paths, and synthesizing an answer."
+        ? `${describeRetrievalMode(retrievalMode)} Source scope: ${activeChatSourceId}.`
+        : describeRetrievalMode(retrievalMode)
     );
     setMessages((current) => [...current, userMessage]);
 
@@ -286,7 +288,11 @@ export function DashboardShell() {
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ question: trimmed, sourceId: activeChatSourceId })
+        body: JSON.stringify({
+          question: trimmed,
+          sourceId: activeChatSourceId,
+          retrievalMode
+        })
       });
 
       const payload = (await response.json()) as ChatApiResponse | { error?: string };
@@ -315,8 +321,8 @@ export function DashboardShell() {
         ]);
         setStatusText(
           activeChatSourceId
-            ? `Answer ready using scoped retrieval for ${activeChatSourceId}. The graph panel reflects the retrieved entities and paths.`
-            : "Answer ready. The graph panel reflects the retrieved entities and paths."
+            ? `Answer ready using ${successPayload.retrievalMode} mode for ${activeChatSourceId}. The graph panel reflects the retrieved entities and paths.`
+            : `Answer ready using ${successPayload.retrievalMode} mode. The graph panel reflects the retrieved entities and paths.`
         );
       });
     } catch (error) {
@@ -447,6 +453,16 @@ export function DashboardShell() {
     }
   }
 
+  function describeRetrievalMode(mode: RetrievalMode) {
+    if (mode === "vector") {
+      return "Retrieving semantic matches only and skipping graph traversal.";
+    }
+    if (mode === "graph") {
+      return "Traversing the graph only and skipping vector search.";
+    }
+    return "Retrieving vector context, traversing graph paths, and synthesizing an answer.";
+  }
+
   return (
     <main className="page-shell">
       <section className="hero">
@@ -499,6 +515,18 @@ export function DashboardShell() {
 
           <div className="composer">
             <form className="composer-shell" onSubmit={handleSubmit}>
+              <div className="mode-strip">
+                {(["hybrid", "vector", "graph"] as RetrievalMode[]).map((mode) => (
+                  <button
+                    className={`mode-button ${retrievalMode === mode ? "mode-button-active" : ""}`}
+                    key={mode}
+                    onClick={() => setRetrievalMode(mode)}
+                    type="button"
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
               {activeChatSourceId ? (
                 <div className="active-scope">
                   <span className="badge">Scoped to {activeChatSourceId}</span>
@@ -520,10 +548,10 @@ export function DashboardShell() {
               <div className="composer-actions">
                 <div className="composer-hint">
                   {pending
-                    ? "Working through vector search, graph traversal, and synthesis."
+                    ? describeRetrievalMode(retrievalMode)
                     : cooldownRemaining > 0
                       ? `Rate-limit guard active for ${cooldownSeconds}s.`
-                      : "The frontend applies a small cooldown to reduce 429s on the Gemini free tier."}
+                      : `Mode: ${retrievalMode}. The frontend applies a small cooldown to reduce 429s on the Gemini free tier.`}
                 </div>
                 <button className="submit-button" disabled={pending || cooldownRemaining > 0} type="submit">
                   {pending ? "Thinking..." : "Ask InsightGraph"}

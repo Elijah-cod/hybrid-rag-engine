@@ -1,4 +1,4 @@
-import type { ExtractionResult, GraphPayload, VectorMatch } from "@/lib/types";
+import type { ExtractionResult, GraphPayload, RetrievalMode, VectorMatch } from "@/lib/types";
 import { getServerEnv } from "@/lib/env";
 
 type GeminiCandidateResponse = {
@@ -134,6 +134,7 @@ export async function synthesizeHybridAnswer(input: {
   vectorMatches: VectorMatch[];
   graph: GraphPayload;
   sourceScope?: string | null;
+  retrievalMode?: RetrievalMode;
 }) {
   const env = getServerEnv();
   const evidenceSummary = input.vectorMatches.map((match, index) => ({
@@ -145,7 +146,7 @@ export async function synthesizeHybridAnswer(input: {
   }));
 
   const prompt = [
-    "You are answering a hybrid retrieval question using both semantic context and graph relationships.",
+    "You are answering a retrieval question using semantic context and graph relationships when available.",
     "Use the supplied evidence only. If the evidence is incomplete, say what is missing.",
     "Structure the answer in three short sections:",
     "1. Direct answer",
@@ -153,6 +154,7 @@ export async function synthesizeHybridAnswer(input: {
     "3. Evidence used",
     "",
     `Question: ${input.question}`,
+    `Retrieval mode: ${input.retrievalMode || "hybrid"}`,
     input.sourceScope ? `Scoped source: ${input.sourceScope}` : "",
     "",
     `Vector evidence: ${JSON.stringify(evidenceSummary)}`,
