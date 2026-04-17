@@ -7,7 +7,8 @@ import type {
   ChatApiResponse,
   ChatMessage,
   GraphPayload,
-  IngestionResult
+  IngestionResult,
+  RetrievedSource
 } from "@/lib/types";
 
 const MIN_REQUEST_INTERVAL_MS = 4_500;
@@ -44,6 +45,7 @@ export function DashboardShell() {
   const [ingesting, setIngesting] = useState(false);
   const [ingestError, setIngestError] = useState<string | null>(null);
   const [ingestResult, setIngestResult] = useState<IngestionResult | null>(null);
+  const [latestSources, setLatestSources] = useState<RetrievedSource[]>([]);
 
   useEffect(() => {
     startTransition(() => {
@@ -134,6 +136,7 @@ export function DashboardShell() {
 
       startTransition(() => {
         setGraph(successPayload.graph);
+        setLatestSources(successPayload.sources);
         setMessages((current) => [
           ...current,
           {
@@ -314,6 +317,54 @@ export function DashboardShell() {
 
           <div className="map-shell">
             <KnowledgeMap graph={graph} />
+          </div>
+
+          <div className="evidence-grid">
+            <div className="evidence-card">
+              <h3>Graph paths</h3>
+              {graph.paths.length > 0 ? (
+                <div className="path-list">
+                  {graph.paths.map((path, index) => (
+                    <div className="path-card" key={`${path.nodes.join("->")}-${index}`}>
+                      <strong>Path {index + 1}</strong>
+                      <p>{path.nodes.join(" → ")}</p>
+                      <div>
+                        {path.relationships.map((relation, relationIndex) => (
+                          <span className="source-chip" key={`${relation}-${relationIndex}`}>
+                            {relation}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="ingest-muted">
+                  Shortest-path results will appear here when Neo4j finds a direct or near-direct connection.
+                </p>
+              )}
+            </div>
+
+            <div className="evidence-card">
+              <h3>Semantic evidence</h3>
+              {latestSources.length > 0 ? (
+                <div className="evidence-list">
+                  {latestSources.map((source) => (
+                    <div className="evidence-row" key={source.id}>
+                      <div className="evidence-heading">
+                        <strong>{source.title || source.sourceId}</strong>
+                        <span>{(source.similarity * 100).toFixed(1)}% match</span>
+                      </div>
+                      <p>{source.content.slice(0, 180)}{source.content.length > 180 ? "..." : ""}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="ingest-muted">
+                  The top vector matches for the latest question will appear here after retrieval.
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="footnote">

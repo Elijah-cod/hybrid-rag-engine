@@ -405,6 +405,64 @@ textarea {
   min-height: 420px;
 }
 
+.evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding: 0 24px 18px;
+}
+
+.evidence-card {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.evidence-card h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+}
+
+.path-list,
+.evidence-list {
+  display: grid;
+  gap: 12px;
+}
+
+.path-card,
+.evidence-row {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 248, 239, 0.8);
+}
+
+.path-card strong,
+.evidence-heading strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.path-card p,
+.evidence-row p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.evidence-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.evidence-heading span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 .empty-state {
   height: 100%;
   min-height: 420px;
@@ -466,6 +524,7 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .evidence-grid,
   .field-grid,
   .stat-strip,
   .chunk-row {
