@@ -7,6 +7,7 @@ InsightGraph is a hybrid retrieval application that combines vector search in Su
 - A Next.js 15 dashboard with:
   - a chat interface for hybrid answers
   - a live knowledge map powered by `react-force-graph-2d`
+  - an ingestion console for pasting source text into the pipeline
 - A Node.js API route for hybrid retrieval:
   - Gemini embeddings for query understanding
   - Supabase `pgvector` similarity search for relevant chunks
@@ -111,6 +112,7 @@ It creates:
 
 - `/` dashboard UI
 - `/api/chat` hybrid RAG response route
+- `/api/ingest` server-side ingestion route
 - `/api/health` simple warmup endpoint
 
 ## Deployment notes

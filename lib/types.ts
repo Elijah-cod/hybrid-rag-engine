@@ -72,3 +72,26 @@ export type ChatApiResponse = {
   graph: GraphPayload;
   sources: RetrievedSource[];
 };
+
+export type IngestRequestPayload = {
+  sourceId: string;
+  title?: string;
+  text: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type IngestionChunkSummary = {
+  chunkIndex: number;
+  entityCount: number;
+  tripletCount: number;
+};
+
+export type IngestionResult = {
+  sourceId: string;
+  title: string | null;
+  chunkCount: number;
+  entityCount: number;
+  tripletCount: number;
+  entities: string[];
+  chunks: IngestionChunkSummary[];
+};

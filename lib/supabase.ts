@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { getServerEnv } from "@/lib/env";
-import type { VectorMatch } from "@/lib/types";
+import type { Entity, Triplet, VectorMatch } from "@/lib/types";
 
 let cachedClient: ReturnType<typeof createClient> | null = null;
 
@@ -46,4 +46,43 @@ export async function matchDocuments(embedding: number[], limit = 6) {
   }
 
   return (data ?? []) as VectorMatch[];
+}
+
+export async function insertDocumentChunk(input: {
+  sourceId: string;
+  title?: string | null;
+  content: string;
+  embedding: number[];
+  metadata?: Record<string, unknown>;
+  entities?: Entity[];
+  triplets?: Triplet[];
+  chunkIndex: number;
+}) {
+  const supabase = getServiceClient();
+  const { error } = await (
+    supabase.from("documents") as never as {
+      insert: (value: {
+        source_id: string;
+        title: string | null;
+        content: string;
+        metadata: Record<string, unknown>;
+        embedding: string;
+      }) => Promise<{ error: { message: string } | null }>;
+    }
+  ).insert({
+    source_id: input.sourceId,
+    title: input.title ?? null,
+    content: input.content,
+    metadata: {
+      ...(input.metadata ?? {}),
+      chunkIndex: input.chunkIndex,
+      entities: input.entities ?? [],
+      triplets: input.triplets ?? []
+    },
+    embedding: toPgVector(input.embedding)
+  });
+
+  if (error) {
+    throw new Error(`Supabase insert failed: ${error.message}`);
+  }
 }

@@ -3,7 +3,12 @@
 import { FormEvent, startTransition, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { KnowledgeMap } from "@/components/knowledge-map";
-import type { ChatApiResponse, ChatMessage, GraphPayload } from "@/lib/types";
+import type {
+  ChatApiResponse,
+  ChatMessage,
+  GraphPayload,
+  IngestionResult
+} from "@/lib/types";
 
 const MIN_REQUEST_INTERVAL_MS = 4_500;
 
@@ -32,6 +37,13 @@ export function DashboardShell() {
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [graph, setGraph] = useState<GraphPayload>(initialGraph);
+  const [sourceId, setSourceId] = useState("strategy-memo");
+  const [sourceTitle, setSourceTitle] = useState("Strategy Memo");
+  const [sourceType, setSourceType] = useState("article");
+  const [documentText, setDocumentText] = useState("");
+  const [ingesting, setIngesting] = useState(false);
+  const [ingestError, setIngestError] = useState<string | null>(null);
+  const [ingestResult, setIngestResult] = useState<IngestionResult | null>(null);
 
   useEffect(() => {
     startTransition(() => {
@@ -150,6 +162,58 @@ export function DashboardShell() {
     }
   }
 
+  async function handleIngest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const trimmedSourceId = sourceId.trim();
+    const trimmedText = documentText.trim();
+
+    if (!trimmedSourceId || !trimmedText || ingesting) {
+      return;
+    }
+
+    setIngesting(true);
+    setIngestError(null);
+
+    try {
+      const response = await fetch("/api/ingest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          sourceId: trimmedSourceId,
+          title: sourceTitle.trim() || undefined,
+          text: trimmedText,
+          metadata: {
+            sourceType
+          }
+        })
+      });
+
+      const payload = (await response.json()) as IngestionResult | { error?: string };
+      if (!response.ok || "error" in payload) {
+        const message =
+          "error" in payload && payload.error ? payload.error : "Ingestion failed unexpectedly.";
+        throw new Error(message);
+      }
+
+      const successPayload = payload as IngestionResult;
+      setIngestResult(successPayload);
+      setStatusVariant("default");
+      setStatusText(
+        `Ingested ${successPayload.chunkCount} chunk${successPayload.chunkCount === 1 ? "" : "s"} into Supabase and Neo4j.`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unexpected ingestion error.";
+      setIngestError(message);
+      setStatusVariant("error");
+      setStatusText(message);
+    } finally {
+      setIngesting(false);
+    }
+  }
+
   return (
     <main className="page-shell">
       <section className="hero">
@@ -258,6 +322,121 @@ export function DashboardShell() {
             </div>
           </div>
         </aside>
+      </section>
+
+      <section className="panel ingest-panel">
+        <header className="panel-header">
+          <div className="panel-title">
+            <h2>Ingestion Console</h2>
+            <p>Seed the vector store and graph directly from raw text without exposing secrets in the client.</p>
+          </div>
+          <div className="badge">{ingesting ? "Seeding stores..." : "Ready to ingest"}</div>
+        </header>
+
+        <div className="ingest-grid">
+          <form className="composer-shell ingest-form" onSubmit={handleIngest}>
+            <div className="field-grid">
+              <label className="field">
+                <span>Source ID</span>
+                <input onChange={(event) => setSourceId(event.target.value)} value={sourceId} />
+              </label>
+              <label className="field">
+                <span>Title</span>
+                <input onChange={(event) => setSourceTitle(event.target.value)} value={sourceTitle} />
+              </label>
+              <label className="field">
+                <span>Source type</span>
+                <select onChange={(event) => setSourceType(event.target.value)} value={sourceType}>
+                  <option value="article">Article</option>
+                  <option value="pdf">PDF</option>
+                  <option value="memo">Memo</option>
+                  <option value="notes">Notes</option>
+                </select>
+              </label>
+            </div>
+
+            <label className="field">
+              <span>Raw text</span>
+              <textarea
+                aria-label="Raw document text for ingestion"
+                onChange={(event) => setDocumentText(event.target.value)}
+                placeholder="Paste the extracted text from a PDF, article, or transcript here."
+                value={documentText}
+              />
+            </label>
+
+            <div className="composer-actions">
+              <div className="composer-hint">
+                {ingesting
+                  ? "Chunking text, extracting entities, embedding chunks, and writing to both stores."
+                  : "This route runs server-side so Neo4j and Supabase credentials never leave the backend."}
+              </div>
+              <button className="submit-button" disabled={ingesting || !sourceId.trim() || !documentText.trim()} type="submit">
+                {ingesting ? "Ingesting..." : "Ingest Document"}
+              </button>
+            </div>
+          </form>
+
+          <div className="ingest-results">
+            <div className="stat-strip">
+              <div className="stat-card">
+                <span>Chunks</span>
+                <strong>{ingestResult?.chunkCount ?? 0}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Entities</span>
+                <strong>{ingestResult?.entityCount ?? 0}</strong>
+              </div>
+              <div className="stat-card">
+                <span>Triplets</span>
+                <strong>{ingestResult?.tripletCount ?? 0}</strong>
+              </div>
+            </div>
+
+            <div className="ingest-card">
+              <h3>Latest ingest</h3>
+              <p>
+                {ingestResult
+                  ? `${ingestResult.title || ingestResult.sourceId} was chunked, embedded, and seeded into Neo4j successfully.`
+                  : "No documents ingested yet. Paste a sample source to populate the graph and vector index."}
+              </p>
+            </div>
+
+            <div className="ingest-card">
+              <h3>Entity preview</h3>
+              <div>
+                {ingestResult?.entities.length ? (
+                  ingestResult.entities.slice(0, 16).map((entity) => (
+                    <span className="source-chip" key={entity}>
+                      {entity}
+                    </span>
+                  ))
+                ) : (
+                  <p className="ingest-muted">Entities extracted from the latest ingestion will appear here.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="ingest-card">
+              <h3>Chunk trace</h3>
+              {ingestResult?.chunks.length ? (
+                <div className="chunk-list">
+                  {ingestResult.chunks.map((chunk) => (
+                    <div className="chunk-row" key={chunk.chunkIndex}>
+                      <span>Chunk {chunk.chunkIndex + 1}</span>
+                      <span>{chunk.entityCount} entities</span>
+                      <span>{chunk.tripletCount} triplets</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="ingest-muted">Per-chunk extraction details will appear after ingestion.</p>
+              )}
+            </div>
+
+            {ingestError ? <div className="status-text" data-variant="error">{ingestError}</div> : null}
+          </div>
+        </div>
       </section>
     </main>
   );
