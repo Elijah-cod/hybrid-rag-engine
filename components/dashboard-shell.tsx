@@ -97,6 +97,7 @@ export function DashboardShell() {
   const [readiness, setReadiness] = useState<ReadinessResponse | null>(null);
   const [readinessPending, setReadinessPending] = useState(false);
   const [readinessError, setReadinessError] = useState<string | null>(null);
+  const [useMockAi, setUseMockAi] = useState(false);
 
   useEffect(() => {
     startTransition(() => {
@@ -284,7 +285,8 @@ export function DashboardShell() {
         body: JSON.stringify({
           question: trimmed,
           sourceId: activeChatSourceId,
-          retrievalMode
+          retrievalMode,
+          useMockAi
         })
       });
 
@@ -358,6 +360,7 @@ export function DashboardShell() {
           sourceId: trimmedSourceId,
           title: sourceTitle.trim() || undefined,
           text: trimmedText,
+          useMockAi,
           metadata: {
             sourceType
           }
@@ -551,6 +554,20 @@ export function DashboardShell() {
           people, and projects connect. This workspace lets both retrieval paths show up
           side by side so answers feel inspectable instead of magical.
         </p>
+        <div className="top-controls">
+          <button
+            className={`mode-button ${useMockAi ? "mode-button-active" : ""}`}
+            onClick={() => setUseMockAi((current) => !current)}
+            type="button"
+          >
+            {useMockAi ? "Mock AI On" : "Mock AI Off"}
+          </button>
+          <span className="composer-hint">
+            {useMockAi
+              ? "Mock AI mode skips live Gemini calls so you can explore the app without quota."
+              : "Live AI mode uses your Gemini key for ingestion and chat."}
+          </span>
+        </div>
       </section>
 
       <section className="dashboard-grid">
@@ -629,7 +646,7 @@ export function DashboardShell() {
                     ? describeRetrievalMode(retrievalMode)
                     : cooldownRemaining > 0
                       ? `Rate-limit guard active for ${cooldownSeconds}s.`
-                      : `Mode: ${retrievalMode}. The frontend applies a small cooldown to reduce 429s on the Gemini free tier.`}
+                      : `Mode: ${retrievalMode}. AI: ${useMockAi ? "mock" : "live"}. The frontend applies a small cooldown to reduce 429s on the Gemini free tier.`}
                 </div>
                 <button className="submit-button" disabled={pending || cooldownRemaining > 0} type="submit">
                   {pending ? "Thinking..." : "Ask InsightGraph"}
@@ -869,7 +886,9 @@ export function DashboardShell() {
               <div className="composer-hint">
                 {ingesting
                   ? "Chunking text, extracting entities, embedding chunks, and writing to both stores."
-                  : "This route runs server-side so Neo4j and Supabase credentials never leave the backend."}
+                  : useMockAi
+                    ? "Mock AI mode uses deterministic local extraction and embeddings before writing to Neo4j and Supabase."
+                    : "This route runs server-side so Neo4j and Supabase credentials never leave the backend."}
               </div>
               <button className="submit-button" disabled={ingesting || !sourceId.trim() || !documentText.trim()} type="submit">
                 {ingesting ? "Ingesting..." : "Ingest Document"}

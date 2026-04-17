@@ -6,8 +6,8 @@ export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
   try {
-    const payload = (await request.json()) as IngestRequestPayload;
-    const result = await ingestDocument(payload);
+    const payload = (await request.json()) as IngestRequestPayload & { useMockAi?: boolean };
+    const result = await ingestDocument(payload, { useMockAi: payload.useMockAi });
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown ingestion error.";

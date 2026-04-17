@@ -59,6 +59,13 @@ textarea {
   margin-bottom: 24px;
 }
 
+.top-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
 .hero-eyebrow {
   width: fit-content;
   padding: 8px 14px;
@@ -843,6 +850,10 @@ textarea {
 
   .active-scope {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .top-controls {
     align-items: stretch;
   }
 
