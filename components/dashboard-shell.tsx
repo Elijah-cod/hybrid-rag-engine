@@ -595,40 +595,50 @@ export function DashboardShell() {
 
           <div className="hero-stage">
             <div className="hero-stage-panel">
-              <div className="hero-stage-orbit hero-stage-orbit-one" aria-hidden="true" />
-              <div className="hero-stage-orbit hero-stage-orbit-two" aria-hidden="true" />
-              <div className="hero-stage-beam hero-stage-beam-one" aria-hidden="true" />
-              <div className="hero-stage-beam hero-stage-beam-two" aria-hidden="true" />
-
-              <div className="hero-stage-network" aria-hidden="true">
-                <span className="hero-node hero-node-a" />
-                <span className="hero-node hero-node-b" />
-                <span className="hero-node hero-node-c" />
-                <span className="hero-node hero-node-d" />
-                <span className="hero-node hero-node-e" />
-                <span className="hero-node hero-node-f" />
-                <span className="hero-link hero-link-ab" />
-                <span className="hero-link hero-link-bc" />
-                <span className="hero-link hero-link-cd" />
-                <span className="hero-link hero-link-ce" />
-                <span className="hero-link hero-link-ef" />
-              </div>
-
-              <div className="hero-stage-copy">
-                <span className="hero-stage-kicker">Retrieval canvas</span>
-                <h2>Semantic evidence and graph structure move together.</h2>
-                <p>
-                  Ask a question, retrieve the strongest chunks, and surface the relationships
-                  that make the answer defensible instead of opaque.
-                </p>
-              </div>
-
-              <div className="hero-stage-foot">
+              <div className="hero-stage-topline">
                 <span className="hero-stage-pill">Mode: {useMockAi ? "mock" : "live"}</span>
                 <span className="hero-stage-pill">Retrieval: {retrievalMode}</span>
                 <span className="hero-stage-pill">
                   Scope: {activeChatSourceId ? activeChatSourceId : "all"}
                 </span>
+              </div>
+
+              <div className="hero-stage-copy">
+                <span className="hero-stage-kicker">Product preview</span>
+                <h2>Trace every answer back to text, entities, and graph paths.</h2>
+                <p>
+                  InsightGraph keeps retrieval inspectable: semantic context, relationship
+                  structure, and final synthesis all live in one workspace.
+                </p>
+              </div>
+
+              <div className="hero-stage-flow">
+                <div className="hero-flow-card">
+                  <span>01</span>
+                  <strong>Search the strongest chunks</strong>
+                  <p>Vector retrieval surfaces the most relevant evidence from your source library.</p>
+                </div>
+                <div className="hero-flow-card">
+                  <span>02</span>
+                  <strong>Traverse the relationship graph</strong>
+                  <p>Neo4j reveals how people, programs, and concepts connect behind the answer.</p>
+                </div>
+                <div className="hero-flow-card">
+                  <span>03</span>
+                  <strong>Synthesize with context you can inspect</strong>
+                  <p>The final response shows both the explanation and the path that supports it.</p>
+                </div>
+              </div>
+
+              <div className="hero-stage-snapshot">
+                <div className="hero-snapshot-card">
+                  <span className="hero-snapshot-label">Sample question</span>
+                  <p>How is Project Atlas connected to the CEO&apos;s 2025 goals?</p>
+                </div>
+                <div className="hero-snapshot-card hero-snapshot-card-accent">
+                  <span className="hero-snapshot-label">Typical path</span>
+                  <p>Project Atlas → supports → Operational Efficiency → owned by → CEO Goals 2025</p>
+                </div>
               </div>
             </div>
 
