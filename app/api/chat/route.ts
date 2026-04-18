@@ -4,6 +4,7 @@ import { mockEmbedText, mockExtractQuestionEntities, mockSynthesizeHybridAnswer 
 import { fetchGraphContext } from "@/lib/neo4j";
 import { matchDocuments } from "@/lib/supabase";
 import type { ChatApiResponse, GraphPayload, RetrievalMode } from "@/lib/types";
+import { toUserFacingErrorMessage } from "@/lib/user-facing-errors";
 
 export const runtime = "nodejs";
 
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(payload);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown server error.";
+    const message = toUserFacingErrorMessage(error, "chat");
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

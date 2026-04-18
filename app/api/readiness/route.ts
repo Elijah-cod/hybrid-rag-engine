@@ -5,6 +5,7 @@ import { verifyGeminiConnection } from "@/lib/gemini";
 import { verifyNeo4jConnection } from "@/lib/neo4j";
 import { verifySupabaseConnection } from "@/lib/supabase";
 import type { ReadinessCheck, ReadinessResponse } from "@/lib/types";
+import { toUserFacingErrorMessage } from "@/lib/user-facing-errors";
 
 export const runtime = "nodejs";
 
@@ -70,7 +71,7 @@ export async function GET() {
       : {
           name: "Gemini",
           status: "error",
-          message: geminiResult.reason instanceof Error ? geminiResult.reason.message : "Gemini check failed."
+          message: toUserFacingErrorMessage(geminiResult.reason, "readiness")
         }
   );
 
