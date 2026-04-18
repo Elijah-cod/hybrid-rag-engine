@@ -592,6 +592,59 @@ export function DashboardShell() {
                 : "Live AI mode uses your Gemini key for ingestion, semantic search embeddings, and final answer synthesis."}
             </div>
           </div>
+
+          <div className="hero-stage">
+            <div className="hero-stage-panel">
+              <div className="hero-stage-orbit hero-stage-orbit-one" aria-hidden="true" />
+              <div className="hero-stage-orbit hero-stage-orbit-two" aria-hidden="true" />
+              <div className="hero-stage-beam hero-stage-beam-one" aria-hidden="true" />
+              <div className="hero-stage-beam hero-stage-beam-two" aria-hidden="true" />
+
+              <div className="hero-stage-network" aria-hidden="true">
+                <span className="hero-node hero-node-a" />
+                <span className="hero-node hero-node-b" />
+                <span className="hero-node hero-node-c" />
+                <span className="hero-node hero-node-d" />
+                <span className="hero-node hero-node-e" />
+                <span className="hero-node hero-node-f" />
+                <span className="hero-link hero-link-ab" />
+                <span className="hero-link hero-link-bc" />
+                <span className="hero-link hero-link-cd" />
+                <span className="hero-link hero-link-ce" />
+                <span className="hero-link hero-link-ef" />
+              </div>
+
+              <div className="hero-stage-copy">
+                <span className="hero-stage-kicker">Retrieval canvas</span>
+                <h2>Semantic evidence and graph structure move together.</h2>
+                <p>
+                  Ask a question, retrieve the strongest chunks, and surface the relationships
+                  that make the answer defensible instead of opaque.
+                </p>
+              </div>
+
+              <div className="hero-stage-foot">
+                <span className="hero-stage-pill">Mode: {useMockAi ? "mock" : "live"}</span>
+                <span className="hero-stage-pill">Retrieval: {retrievalMode}</span>
+                <span className="hero-stage-pill">
+                  Scope: {activeChatSourceId ? activeChatSourceId : "all"}
+                </span>
+              </div>
+            </div>
+
+            <div className="hero-stage-meta">
+              <div className="hero-mini-card">
+                <span>Vector layer</span>
+                <strong>{latestSources.length || libraryItems.length}</strong>
+                <p>Context chunks ready to support synthesis and evidence review.</p>
+              </div>
+              <div className="hero-mini-card">
+                <span>Graph layer</span>
+                <strong>{graphStats.nodes + graphStats.links}</strong>
+                <p>Nodes and edges visualized as soon as a question activates the map.</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="hero-metrics">
