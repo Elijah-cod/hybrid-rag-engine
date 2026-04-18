@@ -65,6 +65,33 @@ function slugifySourceId(input: string) {
     .slice(0, 80);
 }
 
+function inferTitleFromText(text: string) {
+  const compact = text.replace(/\s+/g, " ").trim();
+  if (!compact) {
+    return "";
+  }
+
+  const firstSentence = compact.split(/(?<=[.!?])\s+/)[0] ?? compact;
+  const title = firstSentence.replace(/[.!?]+$/, "").trim();
+  return title.slice(0, 64);
+}
+
+function makeUniqueSourceId(base: string, existingSourceIds: string[]) {
+  const normalizedBase = slugifySourceId(base) || "source";
+  const existing = new Set(existingSourceIds.map((item) => item.trim()).filter(Boolean));
+
+  if (!existing.has(normalizedBase)) {
+    return normalizedBase;
+  }
+
+  let suffix = 2;
+  while (existing.has(`${normalizedBase}-${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `${normalizedBase}-${suffix}`;
+}
+
 async function readApiPayload<T>(response: Response, fallbackMessage: string) {
   const contentType = response.headers.get("content-type") || "";
 
@@ -89,11 +116,13 @@ export function DashboardShell() {
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [graph, setGraph] = useState<GraphPayload>(initialGraph);
-  const [sourceId, setSourceId] = useState("strategy-memo");
-  const [sourceTitle, setSourceTitle] = useState("Strategy Memo");
+  const [sourceId, setSourceId] = useState("");
+  const [sourceTitle, setSourceTitle] = useState("");
   const [sourceType, setSourceType] = useState("article");
   const [articleUrl, setArticleUrl] = useState("");
   const [documentText, setDocumentText] = useState("");
+  const [sourceIdTouched, setSourceIdTouched] = useState(false);
+  const [sourceTitleTouched, setSourceTitleTouched] = useState(false);
   const [ingesting, setIngesting] = useState(false);
   const [ingestError, setIngestError] = useState<string | null>(null);
   const [ingestResult, setIngestResult] = useState<IngestionResult | null>(null);
@@ -150,6 +179,11 @@ export function DashboardShell() {
     [graph]
   );
 
+  const recentIngestSources = useMemo(
+    () => libraryItems.slice(0, 6),
+    [libraryItems]
+  );
+
   const latestIngestLabel = ingestResult?.title || ingestResult?.sourceId || "No source seeded yet";
   const activeSourceLabel =
     selectedLibraryDetail?.source.title ||
@@ -200,6 +234,22 @@ export function DashboardShell() {
     (activeChatSourceId || ingestResult || selectedLibraryDetail
       ? `${activeSourceLabel} → entities → relationships → answer`
       : "Source → semantic match → graph path → answer");
+
+  function applyAutoDerivedFields(nextText: string, nextTitle: string) {
+    let resolvedTitle = nextTitle;
+
+    if (!sourceTitleTouched) {
+      resolvedTitle = inferTitleFromText(nextText);
+      setSourceTitle(resolvedTitle);
+    }
+
+    if (!sourceIdTouched) {
+      const baseTitle = resolvedTitle.trim() || inferTitleFromText(nextText);
+      setSourceId(
+        baseTitle ? makeUniqueSourceId(baseTitle, libraryItems.map((item) => item.sourceId)) : ""
+      );
+    }
+  }
 
   const loadLibrary = useCallback(async () => {
     setLibraryPending(true);
@@ -270,6 +320,51 @@ export function DashboardShell() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected library detail error.";
       setLibraryDetailError(message);
+    } finally {
+      setLibraryDetailPending(false);
+    }
+  }
+
+  async function loadLibrarySourceIntoForm(sourceIdToLoad: string) {
+    setSelectedLibrarySourceId(sourceIdToLoad);
+    setLibraryDetailPending(true);
+    setLibraryDetailError(null);
+
+    try {
+      const response = await fetch(`/api/library/${encodeURIComponent(sourceIdToLoad)}`);
+      const payload = (await response.json()) as SourceLibraryDetail | { error?: string };
+
+      if (!response.ok || "error" in payload) {
+        const message =
+          "error" in payload && payload.error
+            ? payload.error
+            : "Could not load the selected source detail.";
+        throw new Error(message);
+      }
+
+      const detail = payload as SourceLibraryDetail;
+      const reconstructedText = detail.chunks
+        .slice()
+        .sort((left, right) => left.chunkIndex - right.chunkIndex)
+        .map((chunk) => chunk.content)
+        .join("\n\n");
+
+      setSelectedLibraryDetail(detail);
+      setSourceIdTouched(true);
+      setSourceTitleTouched(true);
+      setSelectedFileName(null);
+      setArticleUrl("");
+      setSourceId(detail.source.sourceId);
+      setSourceTitle(detail.source.title || detail.source.sourceId);
+      setSourceType(detail.source.sourceType || "article");
+      setDocumentText(reconstructedText);
+      setStatusVariant("default");
+      setStatusText(`Loaded ${detail.source.title || detail.source.sourceId} into the ingestion console.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unexpected source loading error.";
+      setLibraryDetailError(message);
+      setStatusVariant("error");
+      setStatusText(message);
     } finally {
       setLibraryDetailPending(false);
     }
@@ -417,6 +512,13 @@ export function DashboardShell() {
       setActiveChatSourceId(successPayload.sourceId);
       void loadLibraryDetail(successPayload.sourceId);
       void loadLibrary();
+      setSelectedFileName(null);
+      setArticleUrl("");
+      setDocumentText("");
+      setSourceTitle("");
+      setSourceId("");
+      setSourceTitleTouched(false);
+      setSourceIdTouched(false);
       setStatusVariant("default");
       setStatusText(
         `Ingested ${successPayload.chunkCount} chunk${successPayload.chunkCount === 1 ? "" : "s"} into Supabase and Neo4j. Chat is now scoped to ${successPayload.sourceId}.`
@@ -482,6 +584,8 @@ export function DashboardShell() {
       };
 
       setSelectedFileName(successPayload.fileName);
+      setSourceTitleTouched(true);
+      setSourceIdTouched(true);
       setSourceTitle(successPayload.title);
       setSourceId(successPayload.sourceId || slugifySourceId(successPayload.title) || "uploaded-source");
       setSourceType(successPayload.sourceType);
@@ -553,6 +657,8 @@ export function DashboardShell() {
       };
 
       setSelectedFileName(null);
+      setSourceTitleTouched(true);
+      setSourceIdTouched(true);
       setSourceTitle(successPayload.title);
       setSourceId(successPayload.sourceId);
       setSourceType(successPayload.sourceType);
@@ -575,6 +681,8 @@ export function DashboardShell() {
       return;
     }
 
+    setSourceIdTouched(true);
+    setSourceTitleTouched(true);
     setSourceId(demoSource.sourceId);
     setSourceTitle(demoSource.title);
     setSourceType(demoSource.sourceType);
@@ -934,27 +1042,73 @@ export function DashboardShell() {
 
         <div className="ingest-grid">
           <form className="composer-shell ingest-form" onSubmit={handleIngest}>
-            <div className="preset-strip">
-              {demoSources.map((demoSource) => (
-                <button
-                  className="preset-button"
-                  key={demoSource.sourceId}
-                  onClick={() => loadDemoSource(demoSource.sourceId)}
-                  type="button"
-                >
-                  {demoSource.title}
-                </button>
-              ))}
+            <div className="ingest-toolbar">
+              <div className="preset-group">
+                <span className="preset-label">Starter demos</span>
+                <div className="preset-strip">
+                  {demoSources.map((demoSource) => (
+                    <button
+                      className="preset-button"
+                      key={demoSource.sourceId}
+                      onClick={() => loadDemoSource(demoSource.sourceId)}
+                      type="button"
+                    >
+                      {demoSource.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {recentIngestSources.length > 0 ? (
+                <div className="preset-group">
+                  <span className="preset-label">Recent ingests</span>
+                  <div className="preset-strip">
+                    {recentIngestSources.map((item) => (
+                      <button
+                        className="preset-button preset-button-secondary"
+                        key={item.sourceId}
+                        onClick={() => void loadLibrarySourceIntoForm(item.sourceId)}
+                        type="button"
+                      >
+                        {item.title || item.sourceId}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="field-grid">
               <label className="field">
                 <span>Source ID</span>
-                <input onChange={(event) => setSourceId(event.target.value)} value={sourceId} />
+                <input
+                  onChange={(event) => {
+                    setSourceIdTouched(true);
+                    setSourceId(event.target.value);
+                  }}
+                  placeholder="auto-generated from title"
+                  value={sourceId}
+                />
               </label>
               <label className="field">
                 <span>Title</span>
-                <input onChange={(event) => setSourceTitle(event.target.value)} value={sourceTitle} />
+                <input
+                  onChange={(event) => {
+                    setSourceTitleTouched(true);
+                    const nextTitle = event.target.value;
+                    setSourceTitle(nextTitle);
+                    if (!sourceIdTouched) {
+                      const baseTitle = nextTitle.trim() || inferTitleFromText(documentText);
+                      setSourceId(
+                        baseTitle
+                          ? makeUniqueSourceId(baseTitle, libraryItems.map((item) => item.sourceId))
+                          : ""
+                      );
+                    }
+                  }}
+                  placeholder="auto-generated from text or file name"
+                  value={sourceTitle}
+                />
               </label>
               <label className="field">
                 <span>Source type</span>
@@ -1006,7 +1160,11 @@ export function DashboardShell() {
               </div>
               <textarea
                 aria-label="Raw document text for ingestion"
-                onChange={(event) => setDocumentText(event.target.value)}
+                onChange={(event) => {
+                  const nextText = event.target.value;
+                  setDocumentText(nextText);
+                  applyAutoDerivedFields(nextText, sourceTitle);
+                }}
                 placeholder="Paste the extracted text from a PDF, article, or transcript here."
                 value={documentText}
               />

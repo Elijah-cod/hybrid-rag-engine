@@ -705,6 +705,23 @@ textarea {
   align-self: start;
 }
 
+.ingest-toolbar {
+  display: grid;
+  gap: 14px;
+}
+
+.preset-group {
+  display: grid;
+  gap: 10px;
+}
+
+.preset-label {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .preset-strip {
   display: flex;
   flex-wrap: wrap;
@@ -722,6 +739,12 @@ textarea {
     transform 140ms ease,
     border-color 140ms ease,
     background 140ms ease;
+}
+
+.preset-button-secondary {
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.18);
+  color: var(--accent-strong);
 }
 
 .field-grid {
