@@ -57,12 +57,6 @@ const demoSources = [
   }
 ] as const;
 
-const quickQuestions = [
-  "How is Project Atlas connected to the CEO's 2025 goals?",
-  "Which teams or leaders are most connected across the ingested sources?",
-  "What does the graph say about Northstar AI and Project Atlas?"
-] as const;
-
 function slugifySourceId(input: string) {
   return input
     .toLowerCase()
@@ -157,6 +151,11 @@ export function DashboardShell() {
   );
 
   const latestIngestLabel = ingestResult?.title || ingestResult?.sourceId || "No source seeded yet";
+  const activeSourceLabel =
+    selectedLibraryDetail?.source.title ||
+    ingestResult?.title ||
+    activeChatSourceId ||
+    "the selected source";
 
   const suggestedQuestions = useMemo(() => {
     if (!selectedLibraryDetail) {
@@ -175,6 +174,32 @@ export function DashboardShell() {
         : `What relationships stand out in ${sourceLabel}?`
     ];
   }, [selectedLibraryDetail]);
+
+  const quickQuestions = useMemo(() => {
+    if (activeChatSourceId || ingestResult || selectedLibraryDetail) {
+      return [
+        `Summarize the key themes in ${activeSourceLabel}.`,
+        `Which entities, teams, or concepts stand out in ${activeSourceLabel}?`,
+        `What relationships connect the most important ideas in ${activeSourceLabel}?`
+      ];
+    }
+
+    return [
+      "Summarize the most relevant source in the library.",
+      "Which teams or leaders are most connected across the ingested sources?",
+      "What relationships stand out across the current knowledge base?"
+    ];
+  }, [activeChatSourceId, activeSourceLabel, ingestResult, selectedLibraryDetail]);
+
+  const heroSampleQuestion = activeChatSourceId || ingestResult || selectedLibraryDetail
+    ? `What is most important in ${activeSourceLabel}?`
+    : "What relationships stand out across the current knowledge base?";
+
+  const heroSamplePath =
+    graph.paths[0]?.nodes.join(" → ") ||
+    (activeChatSourceId || ingestResult || selectedLibraryDetail
+      ? `${activeSourceLabel} → entities → relationships → answer`
+      : "Source → semantic match → graph path → answer");
 
   const loadLibrary = useCallback(async () => {
     setLibraryPending(true);
@@ -389,11 +414,12 @@ export function DashboardShell() {
       const successPayload = payload as IngestionResult;
       setIngestResult(successPayload);
       setSelectedLibrarySourceId(successPayload.sourceId);
+      setActiveChatSourceId(successPayload.sourceId);
       void loadLibraryDetail(successPayload.sourceId);
       void loadLibrary();
       setStatusVariant("default");
       setStatusText(
-        `Ingested ${successPayload.chunkCount} chunk${successPayload.chunkCount === 1 ? "" : "s"} into Supabase and Neo4j.`
+        `Ingested ${successPayload.chunkCount} chunk${successPayload.chunkCount === 1 ? "" : "s"} into Supabase and Neo4j. Chat is now scoped to ${successPayload.sourceId}.`
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unexpected ingestion error.";
@@ -701,11 +727,11 @@ export function DashboardShell() {
               <div className="hero-stage-snapshot">
                 <div className="hero-snapshot-card">
                   <span className="hero-snapshot-label">Sample question</span>
-                  <p>How is Project Atlas connected to the CEO&apos;s 2025 goals?</p>
+                  <p>{heroSampleQuestion}</p>
                 </div>
                 <div className="hero-snapshot-card hero-snapshot-card-accent">
                   <span className="hero-snapshot-label">Typical path</span>
-                  <p>Project Atlas → supports → Operational Efficiency → owned by → CEO Goals 2025</p>
+                  <p>{heroSamplePath}</p>
                 </div>
               </div>
             </div>
