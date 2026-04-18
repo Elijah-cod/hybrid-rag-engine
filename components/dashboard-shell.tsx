@@ -591,6 +591,29 @@ export function DashboardShell() {
                 ? "Mock AI mode skips live Gemini calls so you can explore ingestion, retrieval, and the knowledge map without burning quota."
                 : "Live AI mode uses your Gemini key for ingestion, semantic search embeddings, and final answer synthesis."}
             </div>
+
+            <div className="hero-pulse-grid">
+              <div className="hero-pulse-card hero-pulse-card-primary">
+                <span>Sources in library</span>
+                <strong>{libraryItems.length}</strong>
+                <p>Ingested source collections ready for retrieval and inspection.</p>
+              </div>
+              <div className="hero-pulse-card">
+                <span>AI mode</span>
+                <strong>{useMockAi ? "mock" : "live"}</strong>
+                <p>{useMockAi ? "Quota-safe exploration path." : "Production connector path active."}</p>
+              </div>
+              <div className="hero-pulse-card">
+                <span>Chat scope</span>
+                <strong>{activeChatSourceId ?? "all"}</strong>
+                <p>Ask across the whole workspace or narrow to a single source.</p>
+              </div>
+              <div className="hero-pulse-card">
+                <span>Latest ingest</span>
+                <strong>{latestIngestLabel}</strong>
+                <p>Newest source available to the hybrid retrieval pipeline.</p>
+              </div>
+            </div>
           </div>
 
           <div className="hero-stage">
@@ -623,7 +646,7 @@ export function DashboardShell() {
                   <strong>Traverse the relationship graph</strong>
                   <p>Neo4j reveals how people, programs, and concepts connect behind the answer.</p>
                 </div>
-                <div className="hero-flow-card">
+                <div className="hero-flow-card hero-flow-card-wide">
                   <span>03</span>
                   <strong>Synthesize with context you can inspect</strong>
                   <p>The final response shows both the explanation and the path that supports it.</p>
@@ -641,38 +664,6 @@ export function DashboardShell() {
                 </div>
               </div>
             </div>
-
-            <div className="hero-stage-meta">
-              <div className="hero-mini-card">
-                <span>Vector layer</span>
-                <strong>{latestSources.length || libraryItems.length}</strong>
-                <p>Context chunks ready to support synthesis and evidence review.</p>
-              </div>
-              <div className="hero-mini-card">
-                <span>Graph layer</span>
-                <strong>{graphStats.nodes + graphStats.links}</strong>
-                <p>Nodes and edges visualized as soon as a question activates the map.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="hero-metrics">
-          <div className="stat-card stat-card-highlight">
-            <span>Sources in library</span>
-            <strong>{libraryItems.length}</strong>
-          </div>
-          <div className="stat-card">
-            <span>AI mode</span>
-            <strong>{useMockAi ? "mock" : "live"}</strong>
-          </div>
-          <div className="stat-card">
-            <span>Chat scope</span>
-            <strong>{activeChatSourceId ?? "all"}</strong>
-          </div>
-          <div className="stat-card">
-            <span>Latest ingest</span>
-            <strong>{latestIngestLabel}</strong>
           </div>
         </div>
       </section>
