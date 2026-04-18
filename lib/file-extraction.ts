@@ -63,8 +63,14 @@ export async function extractTextFromUploadedFile(file: File) {
     const parser = new PDFParse({ data: buffer });
 
     try {
-      const result = await parser.getText();
-      text = result.text;
+      try {
+        const result = await parser.getText();
+        text = result.text;
+      } catch {
+        throw new Error(
+          "This PDF could not be read automatically. If it is scanned or image-based, paste extracted text into the raw text box instead."
+        );
+      }
     } finally {
       await parser.destroy();
     }
@@ -75,7 +81,9 @@ export async function extractTextFromUploadedFile(file: File) {
 
   const trimmedText = text.trim();
   if (!trimmedText) {
-    throw new Error("The uploaded file did not contain readable text.");
+    throw new Error(
+      "The uploaded file did not contain readable text. If this is a scanned PDF, paste OCR text into the raw text box instead."
+    );
   }
 
   const title = file.name.replace(/\.[^.]+$/, "");

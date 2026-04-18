@@ -71,6 +71,21 @@ function slugifySourceId(input: string) {
     .slice(0, 80);
 }
 
+async function readApiPayload<T>(response: Response, fallbackMessage: string) {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as T;
+  }
+
+  const rawText = (await response.text()).trim();
+  if (rawText.startsWith("<!DOCTYPE") || rawText.startsWith("<html")) {
+    throw new Error(fallbackMessage);
+  }
+
+  throw new Error(rawText || fallbackMessage);
+}
+
 export function DashboardShell() {
   const [messages, setMessages] = useState<ChatMessage[]>(starterMessages);
   const [question, setQuestion] = useState("");
@@ -404,7 +419,19 @@ export function DashboardShell() {
         body: formData
       });
 
-      const payload = (await response.json()) as
+      const payload = (await readApiPayload<
+        | {
+            fileName: string;
+            title: string;
+            sourceId: string;
+            sourceType: string;
+            text: string;
+          }
+        | { error?: string }
+      >(
+        response,
+        "The file could not be processed automatically. If this was a PDF, try a text-based PDF or paste the extracted text into the raw text box instead."
+      )) as
         | {
             fileName: string;
             title: string;
@@ -463,7 +490,19 @@ export function DashboardShell() {
         body: JSON.stringify({ url: trimmedUrl })
       });
 
-      const payload = (await response.json()) as
+      const payload = (await readApiPayload<
+        | {
+            url: string;
+            title: string;
+            sourceId: string;
+            sourceType: "article";
+            text: string;
+          }
+        | { error?: string }
+      >(
+        response,
+        "The article could not be loaded right now. Please try again, or paste the text into the raw text box instead."
+      )) as
         | {
             url: string;
             title: string;
@@ -546,7 +585,6 @@ export function DashboardShell() {
       <section className="panel hero hero-panel">
         <div className="hero-grid">
           <div className="hero-copy">
-            <div className="hero-eyebrow">Hybrid RAG Dashboard</div>
             <div className="hero-title">
               <Image
                 alt="InsightGraph logo"
@@ -619,11 +657,18 @@ export function DashboardShell() {
           <div className="hero-stage">
             <div className="hero-stage-panel">
               <div className="hero-stage-topline">
-                <span className="hero-stage-pill">Mode: {useMockAi ? "mock" : "live"}</span>
-                <span className="hero-stage-pill">Retrieval: {retrievalMode}</span>
-                <span className="hero-stage-pill">
-                  Scope: {activeChatSourceId ? activeChatSourceId : "all"}
-                </span>
+                <div className="hero-stage-stat">
+                  <span>Mode</span>
+                  <strong>{useMockAi ? "mock" : "live"}</strong>
+                </div>
+                <div className="hero-stage-stat">
+                  <span>Retrieval</span>
+                  <strong>{retrievalMode}</strong>
+                </div>
+                <div className="hero-stage-stat">
+                  <span>Scope</span>
+                  <strong>{activeChatSourceId ? activeChatSourceId : "all"}</strong>
+                </div>
               </div>
 
               <div className="hero-stage-copy">
