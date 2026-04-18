@@ -63,6 +63,12 @@ const deploymentChecklist = [
   "Run the readiness check and confirm all connectors return ok."
 ] as const;
 
+const quickQuestions = [
+  "How is Project Atlas connected to the CEO's 2025 goals?",
+  "Which teams or leaders are most connected across the ingested sources?",
+  "What does the graph say about Northstar AI and Project Atlas?"
+] as const;
+
 function slugifySourceId(input: string) {
   return input
     .toLowerCase()
@@ -133,6 +139,7 @@ export function DashboardShell() {
 
   const cooldownRemaining = Math.max(0, cooldownUntil - now);
   const cooldownSeconds = Math.ceil(cooldownRemaining / 1000);
+  const canSubmitQuestion = Boolean(question.trim()) && !pending && cooldownRemaining <= 0;
 
   const graphStats = useMemo(
     () => ({
@@ -284,7 +291,13 @@ export function DashboardShell() {
     event.preventDefault();
 
     const trimmed = question.trim();
-    if (!trimmed || pending) {
+    if (!trimmed) {
+      setStatusVariant("error");
+      setStatusText("Type a question or tap one of the quick prompts before asking InsightGraph.");
+      return;
+    }
+
+    if (pending) {
       return;
     }
 
@@ -735,6 +748,18 @@ export function DashboardShell() {
                   </button>
                 ))}
               </div>
+              <div className="quick-question-strip">
+                {quickQuestions.map((prompt) => (
+                  <button
+                    className="question-prompt-button"
+                    key={prompt}
+                    onClick={() => setQuestion(prompt)}
+                    type="button"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
               {activeChatSourceId ? (
                 <div className="active-scope">
                   <span className="badge">Scoped to {activeChatSourceId}</span>
@@ -750,18 +775,20 @@ export function DashboardShell() {
               <textarea
                 aria-label="Ask a hybrid retrieval question"
                 onChange={(event) => setQuestion(event.target.value)}
-                placeholder="How is Project Atlas connected to the CEO's 2025 goals?"
+                placeholder={`Type your question here. Example: "How is Project Atlas connected to the CEO's 2025 goals?"`}
                 value={question}
               />
               <div className="composer-actions">
                 <div className="composer-hint">
                   {pending
                     ? describeRetrievalMode(retrievalMode)
-                    : cooldownRemaining > 0
+                  : cooldownRemaining > 0
                       ? `Rate-limit guard active for ${cooldownSeconds}s.`
-                      : `Mode: ${retrievalMode}. AI: ${useMockAi ? "mock" : "live"}. The frontend applies a small cooldown to reduce 429s on the Gemini free tier.`}
+                      : question.trim()
+                        ? `Mode: ${retrievalMode}. AI: ${useMockAi ? "mock" : "live"}. The frontend applies a small cooldown to reduce 429s on the Gemini free tier.`
+                        : "Enter a question or use one of the quick prompts above to run chat."}
                 </div>
-                <button className="submit-button" disabled={pending || cooldownRemaining > 0} type="submit">
+                <button className="submit-button" disabled={!canSubmitQuestion} type="submit">
                   {pending ? "Thinking..." : "Ask InsightGraph"}
                 </button>
               </div>

@@ -338,6 +338,26 @@ textarea {
   gap: 10px;
 }
 
+.quick-question-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.question-prompt-button {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(15, 118, 110, 0.28);
+  background: rgba(15, 118, 110, 0.06);
+  color: var(--accent-strong);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
 .mode-button {
   padding: 10px 14px;
   border-radius: 999px;
@@ -363,6 +383,7 @@ textarea {
 .preset-button:hover,
 .library-card:hover,
 .suggestion-button:hover,
+.question-prompt-button:hover,
 .submit-button:hover:enabled {
   transform: translateY(-1px);
 }
@@ -382,6 +403,10 @@ textarea {
   outline: none;
   background: transparent;
   color: var(--ink);
+}
+
+.composer textarea::placeholder {
+  color: rgba(102, 91, 82, 0.78);
 }
 
 .composer-actions {
