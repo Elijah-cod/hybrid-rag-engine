@@ -9,7 +9,6 @@ import type {
   ChatMessage,
   GraphPayload,
   IngestionResult,
-  ReadinessResponse,
   RetrievalMode,
   RetrievedSource,
   SourceLibraryDetail,
@@ -58,12 +57,6 @@ const demoSources = [
   }
 ] as const;
 
-const deploymentChecklist = [
-  "Set production environment variables in Vercel and Supabase.",
-  "Apply the Supabase documents migration before the first deploy.",
-  "Run the readiness check and confirm all connectors return ok."
-] as const;
-
 const quickQuestions = [
   "How is Project Atlas connected to the CEO's 2025 goals?",
   "Which teams or leaders are most connected across the ingested sources?",
@@ -107,9 +100,6 @@ export function DashboardShell() {
   const [libraryDetailError, setLibraryDetailError] = useState<string | null>(null);
   const [activeChatSourceId, setActiveChatSourceId] = useState<string | null>(null);
   const [retrievalMode, setRetrievalMode] = useState<RetrievalMode>("hybrid");
-  const [readiness, setReadiness] = useState<ReadinessResponse | null>(null);
-  const [readinessPending, setReadinessPending] = useState(false);
-  const [readinessError, setReadinessError] = useState<string | null>(null);
   const [useMockAi, setUseMockAi] = useState(false);
 
   useEffect(() => {
@@ -150,22 +140,6 @@ export function DashboardShell() {
     }),
     [graph]
   );
-
-  const readinessStateLabel = useMemo(() => {
-    if (readinessPending) {
-      return "Checking connectors";
-    }
-    if (readiness?.status === "ready") {
-      return "Ready for deployment";
-    }
-    if (readiness?.status === "degraded") {
-      return "Needs connector review";
-    }
-    if (readiness?.status === "not_ready") {
-      return "Blocked by setup";
-    }
-    return "Pending verification";
-  }, [readiness, readinessPending]);
 
   const latestIngestLabel = ingestResult?.title || ingestResult?.sourceId || "No source seeded yet";
 
@@ -258,33 +232,6 @@ export function DashboardShell() {
       setLibraryDetailError(message);
     } finally {
       setLibraryDetailPending(false);
-    }
-  }
-
-  async function runReadinessCheck() {
-    setReadinessPending(true);
-    setReadinessError(null);
-
-    try {
-      const response = await fetch("/api/readiness");
-      const payload = (await response.json()) as ReadinessResponse | { error?: string };
-
-      if (!response.ok && !("status" in payload)) {
-        throw new Error(
-          "error" in payload && payload.error ? payload.error : "Readiness check failed unexpectedly."
-        );
-      }
-
-      if (!("status" in payload)) {
-        throw new Error("Readiness response was malformed.");
-      }
-
-      setReadiness(payload);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unexpected readiness check error.";
-      setReadinessError(message);
-    } finally {
-      setReadinessPending(false);
     }
   }
 
@@ -634,9 +581,6 @@ export function DashboardShell() {
                   Mock AI
                 </button>
               </div>
-              <a className="ghost-button" href="#readiness">
-                Review Deployment
-              </a>
               <a className="ghost-button" href="#ingestion">
                 Seed Sample Data
               </a>
@@ -648,43 +592,6 @@ export function DashboardShell() {
                 : "Live AI mode uses your Gemini key for ingestion, semantic search embeddings, and final answer synthesis."}
             </div>
           </div>
-
-          <div className="hero-rail">
-            <div className="hero-card">
-              <span className="section-kicker">Operating mode</span>
-              <h2>{useMockAi ? "Quota-safe exploration" : "Production connector path"}</h2>
-              <p>
-                {useMockAi
-                  ? "Best for demos, local UX review, and walkthroughs while Gemini quota is limited."
-                  : "Best for end-to-end validation against Gemini, Supabase pgvector, and Neo4j AuraDB."}
-              </p>
-              <div className="hero-chip-row">
-                <span className="source-chip">Retrieval: {retrievalMode}</span>
-                <span className="source-chip">
-                  Scope: {activeChatSourceId ? activeChatSourceId : "all sources"}
-                </span>
-              </div>
-            </div>
-
-            <div className="hero-card">
-              <span className="section-kicker">Deployment runway</span>
-              <h2>{readinessStateLabel}</h2>
-              <p>
-                The app is already structured for deployment. This final stretch is about
-                validating connectors, confirming environment variables, and shipping with confidence.
-              </p>
-              <div className="checklist">
-                {deploymentChecklist.map((item) => (
-                  <div className="checklist-row" key={item}>
-                    <span className="checklist-mark" aria-hidden="true">
-                      {readiness?.status === "ready" ? "✓" : "•"}
-                    </span>
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
 
         <div className="hero-metrics">
@@ -693,8 +600,8 @@ export function DashboardShell() {
             <strong>{libraryItems.length}</strong>
           </div>
           <div className="stat-card">
-            <span>Connector status</span>
-            <strong>{readiness?.status ?? "idle"}</strong>
+            <span>AI mode</span>
+            <strong>{useMockAi ? "mock" : "live"}</strong>
           </div>
           <div className="stat-card">
             <span>Chat scope</span>
@@ -889,59 +796,6 @@ export function DashboardShell() {
             </div>
           </div>
         </aside>
-      </section>
-
-      <section className="panel readiness-panel" id="readiness">
-        <header className="panel-header">
-          <div className="panel-title">
-            <h2>Deployment Readiness</h2>
-            <p>Run live connector checks before you deploy or right after the app goes live.</p>
-          </div>
-          <button className="ghost-button" onClick={() => void runReadinessCheck()} type="button">
-            {readinessPending ? "Checking..." : "Run Readiness Check"}
-          </button>
-        </header>
-
-        <div className="readiness-grid">
-          <div className="readiness-summary">
-            <div className="stat-card">
-              <span>Overall</span>
-              <strong>{readiness?.status ?? "idle"}</strong>
-            </div>
-            <div className="stat-card">
-              <span>Checked</span>
-              <strong>{readiness ? new Date(readiness.checkedAt).toLocaleTimeString() : "--:--"}</strong>
-            </div>
-          </div>
-
-          <div className="readiness-list">
-            {readiness?.checks.length ? (
-              readiness.checks.map((check) => (
-                <div className="readiness-card" key={check.name}>
-                  <div className="readiness-card-header">
-                    <strong>{check.name}</strong>
-                    <span className={`readiness-pill readiness-pill-${check.status}`}>{check.status}</span>
-                  </div>
-                  <p>{check.message}</p>
-                </div>
-              ))
-            ) : (
-              <div className="readiness-card">
-                <p>
-                  Run the readiness check after setting production environment variables and applying the Supabase migration.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {readinessError ? (
-          <div className="footnote">
-            <div className="status-text" data-variant="error">
-              {readinessError}
-            </div>
-          </div>
-        ) : null}
       </section>
 
       <section className="panel ingest-panel" id="ingestion">
