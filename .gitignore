@@ -1,0 +1,12 @@
+.next
+node_modules
+.env
+.env.local
+.env.*.local
+tsconfig.tsbuildinfo
+tsconfig.typecheck.tsbuildinfo
+dist
+coverage
+.DS_Store
+supabase/.env.local
+supabase/.temp
