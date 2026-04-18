@@ -82,6 +82,21 @@ textarea {
   gap: 16px;
 }
 
+.hero-title {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: center;
+}
+
+.hero-logo {
+  width: clamp(64px, 8vw, 88px);
+  height: auto;
+  border-radius: 22px;
+  object-fit: cover;
+  box-shadow: 0 18px 38px rgba(18, 137, 208, 0.18);
+}
+
 .hero-eyebrow {
   width: fit-content;
   padding: 8px 14px;
@@ -1032,6 +1047,11 @@ textarea {
   .active-scope {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .hero-title {
+    grid-template-columns: 1fr;
+    gap: 14px;
   }
 
   .top-controls {

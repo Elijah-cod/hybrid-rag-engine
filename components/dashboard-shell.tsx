@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { FormEvent, startTransition, useCallback, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { KnowledgeMap } from "@/components/knowledge-map";
@@ -599,7 +600,17 @@ export function DashboardShell() {
         <div className="hero-grid">
           <div className="hero-copy">
             <div className="hero-eyebrow">Hybrid RAG Dashboard</div>
-            <h1>InsightGraph connects context to structure.</h1>
+            <div className="hero-title">
+              <Image
+                alt="InsightGraph logo"
+                className="hero-logo"
+                height={88}
+                priority
+                src="/insightgraph-logo.jpeg"
+                width={88}
+              />
+              <h1>InsightGraph connects context to structure.</h1>
+            </div>
             <p>
               Semantic chunks explain what matters. Graph relationships reveal how ideas,
               people, and projects connect. This workspace lets both retrieval paths show up
