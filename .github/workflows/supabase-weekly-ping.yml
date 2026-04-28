@@ -1,0 +1,55 @@
+name: Weekly Supabase Ping
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 10:00 Africa/Nairobi every Tuesday = 07:00 UTC
+    - cron: "0 7 * * 2"
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_TABLE_NAME: documents
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Ping Supabase table
+        run: |
+          node <<'EOF'
+          const supabaseUrl = process.env.SUPABASE_URL;
+          const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+          const tableName = process.env.SUPABASE_TABLE_NAME || "documents";
+
+          if (!supabaseUrl || !serviceRoleKey) {
+            throw new Error(
+              "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY GitHub secret."
+            );
+          }
+
+          const endpoint = new URL(`/rest/v1/${tableName}`, supabaseUrl);
+          endpoint.searchParams.set("select", "*");
+          endpoint.searchParams.set("limit", "1");
+
+          const response = await fetch(endpoint, {
+            headers: {
+              apikey: serviceRoleKey,
+              Authorization: `Bearer ${serviceRoleKey}`,
+            },
+          });
+
+          const body = await response.text();
+
+          if (!response.ok) {
+            throw new Error(
+              `Supabase ping failed with ${response.status}: ${body}`
+            );
+          }
+
+          console.log(`Supabase table "${tableName}" responded successfully.`);
+          EOF
