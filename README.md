@@ -2,6 +2,8 @@
 
 InsightGraph is a hybrid retrieval application that combines vector search in Supabase with relationship-aware graph traversal in Neo4j. The goal is to ingest unstructured text, extract entities and relationships with Gemini, and then answer questions using both semantic context and graph structure.
 
+[Live demo](https://hybrid-rag-engine-five.vercel.app) · [Repository](https://github.com/Elijah-cod/hybrid-rag-engine)
+
 ## What is included
 
 - A Next.js 15 dashboard with:
@@ -21,6 +23,19 @@ InsightGraph is a hybrid retrieval application that combines vector search in Su
 - A starter SQL migration for the `documents` table and vector search RPC
 
 ## Architecture
+
+```mermaid
+flowchart LR
+    A["Text, URL, or document"] --> B["Extraction and chunking"]
+    B --> C["Gemini entities and relationships"]
+    B --> D["Gemini embeddings"]
+    C --> E["Neo4j graph"]
+    D --> F["Supabase pgvector"]
+    Q["User question"] --> G["Hybrid retrieval"]
+    E --> G
+    F --> G
+    G --> H["Grounded answer and knowledge map"]
+```
 
 1. Ingestion
    Raw text is sent to the Supabase Edge Function.
@@ -116,7 +131,7 @@ Add these to Supabase project secrets or `supabase/.env.local`:
 
 ## Database setup
 
-Run the migration in [supabase/migrations/20260417000000_init_documents.sql](/Users/elijah/Documents/Projects/hybrid-rag-engine/supabase/migrations/20260417000000_init_documents.sql).
+Run the migration in [`supabase/migrations/20260417000000_init_documents.sql`](supabase/migrations/20260417000000_init_documents.sql).
 
 It creates:
 
@@ -167,6 +182,13 @@ npm run build
 2. Merge into `develop` for testing.
 3. Open a PR from `develop` to `main` when ready.
 
-## Important security note
+## Current limitations
 
-Secrets were shared in the task description. Rotate those credentials after development and replace them in your deployed environment. They are not stored in this repository.
+- Retrieval quality does not yet have an automated evaluation suite.
+- Mock AI is intended for deterministic product exploration, not quality benchmarking.
+- Output quality and latency depend on the configured Gemini models and service quotas.
+- The complete live pipeline requires separately provisioned Supabase and Neo4j services.
+
+## Security
+
+Keep all credentials in local or deployment environment variables. Never commit Gemini keys, Neo4j credentials, or the Supabase service-role key. Rotate any credential that may have been exposed during development.
