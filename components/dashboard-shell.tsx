@@ -26,7 +26,7 @@ import type {
 const MIN_REQUEST_INTERVAL_MS = 4_500;
 const MOCK_STORAGE_KEY = "insightgraph.mock-workspace.v2";
 
-type WorkspaceView = "map" | "query" | "sources" | "schema" | "traces" | "settings";
+type WorkspaceView = "map" | "query" | "sources" | "schema" | "traces" | "settings" | "guide";
 
 type IconName =
   | "map"
@@ -258,6 +258,7 @@ export function DashboardShell() {
   const [useMockAi, setUseMockAi] = useState(false);
   const [mockDocuments, setMockDocuments] = useState<MockWorkspaceDocument[]>([]);
   const [mockWorkspaceReady, setMockWorkspaceReady] = useState(false);
+  const [selectedSchemaType, setSelectedSchemaType] = useState<string | null>(null);
 
   useEffect(() => {
     workspaceContentRef.current?.scrollTo({ top: 0 });
@@ -1200,14 +1201,136 @@ export function DashboardShell() {
   function renderSchemaView() {
     const inferredTypes = Array.from(new Set(graph.nodes.map((node) => node.type || "Entity")));
     const schemaTypes = inferredTypes.length ? inferredTypes : ["Person", "Organization", "Project", "Concept"];
+    const activeSchemaType = selectedSchemaType && schemaTypes.includes(selectedSchemaType)
+      ? selectedSchemaType
+      : schemaTypes[0];
+    const relatedSchemaType = schemaTypes.find((type) => type !== activeSchemaType) ?? "Related entity";
+    const activeTypeCount = graph.nodes.filter((node) => (node.type || "Entity") === activeSchemaType).length;
+
     return (
       <div className="schema-view">
+        <header className="schema-heading">
+          <div>
+            <span className="technical-label">Graph model</span>
+            <h1>Schema Builder</h1>
+            <p>See how the current workspace organizes people, projects, organizations, and ideas.</p>
+          </div>
+          <dl>
+            <div><dt>Types</dt><dd>{schemaTypes.length}</dd></div>
+            <div><dt>Nodes</dt><dd>{graphStats.nodes}</dd></div>
+            <div><dt>Links</dt><dd>{graphStats.links}</dd></div>
+          </dl>
+        </header>
         <section className="schema-list">
-          <div className="section-bar"><h2>Node Entities</h2><button type="button"><AppIcon name="plus" size={18} /></button></div>
-          {schemaTypes.map((type, index) => <button className={index === 0 ? "is-active" : ""} key={type} type="button"><AppIcon name={type.toLowerCase().includes("person") ? "person" : "schema"} /><span><strong>{type}</strong><small>{graph.nodes.filter((node) => (node.type || "Entity") === type).length || "Simulated"} nodes</small></span></button>)}
+          <div className="section-bar"><h2>Entity types</h2><span>Inferred</span></div>
+          <div className="schema-type-list">
+            {schemaTypes.map((type) => (
+              <button
+                aria-pressed={activeSchemaType === type}
+                className={activeSchemaType === type ? "is-active" : ""}
+                key={type}
+                onClick={() => setSelectedSchemaType(type)}
+                type="button"
+              >
+                <AppIcon name={type.toLowerCase().includes("person") ? "person" : "schema"} />
+                <span><strong>{type}</strong><small>{graph.nodes.filter((node) => (node.type || "Entity") === type).length || "Preview"} nodes</small></span>
+                <AppIcon name="arrow" size={15} />
+              </button>
+            ))}
+          </div>
+          <p className="schema-list-note">Types appear automatically after a query returns graph entities.</p>
         </section>
-        <section className="schema-canvas"><div className="schema-node"><AppIcon name="person" /><strong>{schemaTypes[0]}</strong><span>{graphStats.links} edges</span></div><div className="schema-node secondary"><AppIcon name="schema" /><strong>{schemaTypes[1] ?? "Organization"}</strong><span>related</span></div><svg aria-hidden="true"><line x1="35%" x2="65%" y1="50%" y2="50%" /></svg></section>
-        <aside className="schema-properties"><div className="section-bar"><h2>{schemaTypes[0]}</h2><span>Node</span></div><label><span>Property name</span><input readOnly value="id" /><small>UUID · Primary key</small></label><label><span>Property name</span><input readOnly value="name" /><small>String · Indexed</small></label><label><span>Property name</span><input readOnly value="type" /><small>Enum</small></label><button className="outline-button" type="button"><AppIcon name="plus" size={16} /> Add property</button><p>This schema is inferred from the active graph. Editing is simulated until a schema persistence API is connected.</p></aside>
+        <section className="schema-canvas">
+          <div className="schema-canvas-bar">
+            <span><i /> Relationship preview</span>
+            <small>{graphStats.links ? "Based on the latest query" : "Sample structure"}</small>
+          </div>
+          <div className="schema-diagram">
+            <article className="schema-node">
+              <span className="schema-node-icon"><AppIcon name={activeSchemaType.toLowerCase().includes("person") ? "person" : "schema"} /></span>
+              <div><strong>{activeSchemaType}</strong><span>{activeTypeCount || "Preview"} nodes</span></div>
+            </article>
+            <div className="schema-relationship" aria-label="Related to"><span>RELATED TO</span></div>
+            <article className="schema-node secondary">
+              <span className="schema-node-icon"><AppIcon name="schema" /></span>
+              <div><strong>{relatedSchemaType}</strong><span>{graphStats.links || "Preview"} links</span></div>
+            </article>
+          </div>
+          <p className="schema-canvas-note">Ask a question in the Query Engine to replace this preview with the types found in your own data.</p>
+        </section>
+        <aside className="schema-properties">
+          <div className="section-bar"><h2>{activeSchemaType}</h2><span>Read only</span></div>
+          <div className="schema-property-intro"><span className="technical-label">Detected fields</span><p>Every {activeSchemaType.toLowerCase()} node uses these shared properties.</p></div>
+          <dl className="schema-property-list">
+            <div><dt>id</dt><dd>Unique identifier</dd><span>UUID · Primary</span></div>
+            <div><dt>name</dt><dd>Display name</dd><span>String · Indexed</span></div>
+            <div><dt>type</dt><dd>Entity category</dd><span>Enum</span></div>
+          </dl>
+          <div className="schema-readonly-note"><AppIcon name="spark" size={18} /><p><strong>Automatically inferred</strong><span>The model updates as new entities and relationships are retrieved.</span></p></div>
+        </aside>
+      </div>
+    );
+  }
+
+  function renderGuideView() {
+    const journey = [
+      { title: "Add something to understand", copy: "Upload a PDF, paste text, or load an article. InsightGraph breaks it into useful passages." },
+      { title: "Find the important names and ideas", copy: "The app identifies people, projects, organizations, concepts, and the relationships between them." },
+      { title: "Ask a normal question", copy: "Use everyday language. You do not need to write prompts or know database terminology." },
+      { title: "Check why the answer makes sense", copy: "Read the supporting passages, then follow the relationship path in the Knowledge Map." }
+    ];
+
+    return (
+      <div className="guide-view">
+        <header className="guide-hero">
+          <div>
+            <span className="technical-label">Start here</span>
+            <h1>Turn documents into answers you can inspect.</h1>
+            <p>InsightGraph reads your sources in two ways: it finds passages with similar meaning and maps how the important people, projects, and ideas connect.</p>
+            <div className="guide-actions">
+              <button className="primary-button" onClick={() => { setUseMockAi(true); seedMockWorkspace(); setActiveView("sources"); }} type="button"><AppIcon name="play" size={17} /> Explore sample data</button>
+              <button className="outline-button" onClick={() => { setActiveView("sources"); setShowIngestPanel(true); }} type="button"><AppIcon name="plus" size={17} /> Add your own source</button>
+            </div>
+          </div>
+          <div className="guide-answer-preview" aria-label="Example answer flow">
+            <span className="technical-label">One question, two checks</span>
+            <p>“How is Project Atlas connected to the CEO’s goals?”</p>
+            <div><span><AppIcon name="document" size={17} /> Supporting passages</span><strong>Meaning</strong></div>
+            <div><span><AppIcon name="schema" size={17} /> Relationship path</span><strong>Structure</strong></div>
+            <footer><i /> Combined into one grounded answer</footer>
+          </div>
+        </header>
+
+        <section className="guide-journey">
+          <div className="guide-section-heading"><span className="technical-label">The four-step journey</span><h2>From source to explainable answer</h2></div>
+          <ol>{journey.map((step, index) => <li key={step.title}><span>{String(index + 1).padStart(2, "0")}</span><div><h3>{step.title}</h3><p>{step.copy}</p></div></li>)}</ol>
+        </section>
+
+        <div className="guide-explainers">
+          <section>
+            <div className="guide-section-heading"><span className="technical-label">Plain-language glossary</span><h2>What the app is doing</h2></div>
+            <dl className="guide-glossary">
+              <div><dt>Semantic search</dt><dd>Finds passages that mean something similar to your question, even when they use different words.</dd></div>
+              <div><dt>Knowledge graph</dt><dd>Draws a map of names and ideas, then shows the relationships connecting them.</dd></div>
+              <div><dt>Hybrid answer</dt><dd>Uses both the relevant passages and the relationship map before writing a response.</dd></div>
+            </dl>
+          </section>
+          <section>
+            <div className="guide-section-heading"><span className="technical-label">Choose your mode</span><h2>Free demo or live services</h2></div>
+            <div className="guide-mode"><span>Mock AI</span><div><strong>Best for exploring</strong><p>Runs locally with sample or uploaded data. It does not use Gemini quota.</p></div></div>
+            <div className="guide-mode"><span>Live AI</span><div><strong>Best for final testing</strong><p>Uses Gemini, Supabase, and Neo4j to prove the production workflow.</p></div></div>
+          </section>
+        </div>
+
+        <section className="guide-workspace-links">
+          <div className="guide-section-heading"><span className="technical-label">Know where to go</span><h2>Use the workspace</h2></div>
+          <div>
+            <button onClick={() => setActiveView("sources")} type="button"><span><AppIcon name="database" /><strong>Data Sources</strong></span><small>Add and manage documents</small><AppIcon name="arrow" size={17} /></button>
+            <button onClick={() => setActiveView("query")} type="button"><span><AppIcon name="spark" /><strong>Query Engine</strong></span><small>Ask questions and read answers</small><AppIcon name="arrow" size={17} /></button>
+            <button onClick={() => setActiveView("map")} type="button"><span><AppIcon name="map" /><strong>Knowledge Map</strong></span><small>Inspect evidence and connections</small><AppIcon name="arrow" size={17} /></button>
+            <button onClick={() => setActiveView("traces")} type="button"><span><AppIcon name="trace" /><strong>Trace Logs</strong></span><small>See each retrieval step</small><AppIcon name="arrow" size={17} /></button>
+          </div>
+        </section>
       </div>
     );
   }
@@ -1245,6 +1368,7 @@ export function DashboardShell() {
     if (activeView === "schema") return renderSchemaView();
     if (activeView === "traces") return renderTracesView();
     if (activeView === "settings") return renderSettingsView();
+    if (activeView === "guide") return renderGuideView();
     return renderMapView();
   }
 
@@ -1260,7 +1384,7 @@ export function DashboardShell() {
           {navItems.map((item) => <button aria-current={activeView === item.id ? "page" : undefined} aria-label={item.label} className={activeView === item.id ? "is-active" : ""} key={item.id} onClick={() => setActiveView(item.id)} type="button"><AppIcon name={item.icon} /><span>{item.label}</span></button>)}
         </nav>
         <div className="side-nav-footer">
-          <button onClick={() => setActiveView("settings")} type="button"><AppIcon name="document" size={18} /> Documentation</button>
+          <button aria-current={activeView === "guide" ? "page" : undefined} aria-label="How It Works" className={activeView === "guide" ? "is-active" : ""} onClick={() => setActiveView("guide")} type="button"><AppIcon name="document" size={18} /><span>How It Works</span></button>
           <div className="user-chip"><span>EA</span><div><strong>Workspace Admin</strong><small>{useMockAi ? "Local simulation" : "Production mode"}</small></div></div>
         </div>
       </aside>
