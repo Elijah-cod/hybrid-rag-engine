@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, startTransition, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import { KnowledgeMap } from "@/components/knowledge-map";
@@ -222,6 +222,7 @@ function parseMockWorkspace(raw: string | null) {
 }
 
 export function DashboardShell() {
+  const workspaceContentRef = useRef<HTMLDivElement | null>(null);
   const [activeView, setActiveView] = useState<WorkspaceView>("map");
   const [showIngestPanel, setShowIngestPanel] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(starterMessages);
@@ -257,6 +258,10 @@ export function DashboardShell() {
   const [useMockAi, setUseMockAi] = useState(false);
   const [mockDocuments, setMockDocuments] = useState<MockWorkspaceDocument[]>([]);
   const [mockWorkspaceReady, setMockWorkspaceReady] = useState(false);
+
+  useEffect(() => {
+    workspaceContentRef.current?.scrollTo({ top: 0 });
+  }, [activeView]);
 
   useEffect(() => {
     startTransition(() => {
@@ -1252,7 +1257,7 @@ export function DashboardShell() {
         </button>
         <button className="new-workspace-button" onClick={() => { setActiveView("sources"); setShowIngestPanel(true); }} type="button"><AppIcon name="plus" size={18} /> New Workspace</button>
         <nav aria-label="Workspace navigation">
-          {navItems.map((item) => <button aria-current={activeView === item.id ? "page" : undefined} className={activeView === item.id ? "is-active" : ""} key={item.id} onClick={() => setActiveView(item.id)} type="button"><AppIcon name={item.icon} /><span>{item.label}</span></button>)}
+          {navItems.map((item) => <button aria-current={activeView === item.id ? "page" : undefined} aria-label={item.label} className={activeView === item.id ? "is-active" : ""} key={item.id} onClick={() => setActiveView(item.id)} type="button"><AppIcon name={item.icon} /><span>{item.label}</span></button>)}
         </nav>
         <div className="side-nav-footer">
           <button onClick={() => setActiveView("settings")} type="button"><AppIcon name="document" size={18} /> Documentation</button>
@@ -1273,7 +1278,7 @@ export function DashboardShell() {
           </div>
         </header>
         <div className={`system-banner ${statusVariant === "error" ? "is-error" : ""}`}><span>{statusText}</span>{statusVariant === "error" && !useMockAi ? <button onClick={() => setUseMockAi(true)} type="button">Switch to Mock AI</button> : null}</div>
-        <div className="workspace-content">{renderActiveView()}</div>
+        <div className="workspace-content" ref={workspaceContentRef}>{renderActiveView()}</div>
       </section>
     </main>
   );

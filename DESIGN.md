@@ -1,85 +1,73 @@
 ---
-name: InsightGraph Ops Console
+name: Synthetic Intelligence Blueprint
 colors:
-  background: "#0a0f17"
-  background-elevated: "#101826"
-  surface: "#101825"
-  surface-muted: "#172233"
-  surface-strong: "#1d2b3f"
-  surface-panel: "rgba(16, 24, 37, 0.84)"
-  surface-panel-strong: "rgba(22, 33, 49, 0.96)"
-  line: "rgba(150, 180, 220, 0.16)"
-  line-strong: "rgba(80, 217, 255, 0.28)"
-  text: "#ecf6ff"
-  text-muted: "#9fb1c8"
-  text-soft: "#7e91ab"
-  primary: "#4fd9ff"
-  primary-strong: "#1eb7e4"
-  success: "#59e6a7"
-  warning: "#ffbf69"
-  danger: "#ff7c88"
-  glow: "rgba(79, 217, 255, 0.22)"
-  grid: "rgba(255, 255, 255, 0.045)"
+  background: "#0b0e14"
+  surface: "#10131a"
+  surface-low: "#14181f"
+  surface-mid: "#1b1f27"
+  surface-high: "#272a31"
+  line: "rgba(225, 253, 255, 0.11)"
+  text: "#e1e2eb"
+  text-soft: "#b9c4d2"
+  muted: "#8d9aaf"
+  primary: "#00f2ff"
+  primary-soft: "#74f5ff"
+  success: "#67f4b7"
+  secondary: "#adc6ff"
+  danger: "#ffb4ab"
 typography:
-  display:
-    fontFamily: Inter
-    fontSize: 56px
-    fontWeight: "700"
-    lineHeight: "1"
-    letterSpacing: -0.04em
-  headline:
-    fontFamily: Inter
-    fontSize: 28px
-    fontWeight: "650"
-    lineHeight: "1.1"
-  title:
-    fontFamily: Inter
-    fontSize: 18px
-    fontWeight: "600"
-    lineHeight: "1.3"
-  body:
-    fontFamily: Inter
-    fontSize: 15px
-    fontWeight: "400"
-    lineHeight: "1.6"
   ui:
     fontFamily: Inter
-    fontSize: 14px
-    fontWeight: "500"
-    lineHeight: "1.4"
-  mono:
+    fontSize: 16px
+    fontWeight: "400"
+    lineHeight: "1.6"
+  heading:
+    fontFamily: Inter
+    fontSize: 32px
+    fontWeight: "600"
+    lineHeight: "1.2"
+  label:
     fontFamily: JetBrains Mono
     fontSize: 12px
     fontWeight: "600"
-    lineHeight: "1.4"
+    lineHeight: "1"
+    letterSpacing: 0.08em
 rounded:
-  panel: 28px
-  card: 18px
-  chip: 999px
+  panel: 5px
+  control: 4px
+  pill: 999px
 spacing:
-  page: 28px
-  panel-gap: 18px
-  card-gap: 12px
+  page: 40px
+  gutter: 24px
+  panel-gap: 12px
 ---
 
-## Brand & Style
+## Direction
 
-InsightGraph should feel like a modern AI operations console: sharp, dark, and deliberate. The visual personality is product-first, not marketing-first. Surfaces should communicate traceability, system state, and workflow readiness.
+InsightGraph follows the supplied Stitch "Synthetic Intelligence Blueprint." It is a dense, desktop-first AI-native knowledge workspace, not a marketing landing page. The interface must expose graph structure, semantic evidence, source ingestion, schema, and traces as parts of one persistent operating environment.
 
-## Layout
+## Structure
 
-Use a wide desktop shell with strong left-to-right flow:
-- Primary command surface on the left.
-- System state and explainability panels on the right.
-- Dense but readable cards, with breathing room created by sectional rhythm rather than oversized whitespace.
+- A fixed left rail owns product navigation and workspace creation.
+- A compact top bar switches between Visualizer, Query Engine, and History.
+- Knowledge Map is the primary workspace, with graph canvas, evidence inspector, and bottom query composer.
+- Data Sources owns ingestion and source-library management.
+- Schema Builder, Trace Logs, and Settings use dedicated technical workspaces.
+- Tablet collapses wide panels; mobile replaces the left rail with icon navigation and stacks content vertically.
 
-## Components
+## Visual Language
 
-- Panels should feel structural, not floaty.
-- Chips and badges should communicate mode, source scope, and connector status.
-- Empty states should explain the next useful action.
-- Status and fallback guidance should be visible without opening a separate settings page.
+- Use deep charcoal surfaces and thin, high-contrast borders for technical density.
+- Cyan identifies active navigation, primary actions, graph nodes, and live states.
+- Emerald identifies successful or connected states.
+- Inter carries product content; JetBrains Mono carries labels, IDs, modes, traces, and metadata.
+- Panels use tonal layering and restrained translucency. Corners remain compact and precise.
+- Grid backgrounds belong on graph and schema canvases, not on every surface.
 
-## Motion
+## Interaction
 
-Keep transitions quick and subtle. Hover, focus, and load states should feel responsive and technical. Avoid ornamental animation except for very light grid/glow behavior that reinforces the “live system” feeling.
+- Navigation changes views without losing query, source, or graph state.
+- Switching views resets the workspace scroll position.
+- Mock AI must remain fully functional without cloud quotas and should produce meaningful nodes, edges, paths, and evidence.
+- Empty states explain the next action. Errors offer a plain-language local fallback.
+- Motion communicates active data flow only; avoid decorative page choreography.

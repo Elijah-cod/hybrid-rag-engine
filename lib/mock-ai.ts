@@ -65,7 +65,12 @@ function extractEntityCandidates(text: string) {
   const cleaned = (matches ?? [])
     .map((match) => match.trim().replace(/\s+/g, " "))
     .filter((match) => match.length > 2)
-    .filter((match) => !/^(The|This|That|These|Those)$/.test(match));
+    .filter(
+      (match) =>
+        !/^(The|This|That|These|Those|How|What|Which|Who|Where|When|Why|Can|Could|Would|Should|Summarize|Explain|Find|Show)$/i.test(
+          match
+        )
+    );
 
   return Array.from(new Set(cleaned)).slice(0, 30);
 }

@@ -184,13 +184,31 @@ function buildMockGraph(documents: MockWorkspaceDocument[], entityNames: string[
       relation: triplet.relation || "RELATED_TO"
     }));
 
+  const graphLinks: GraphLink[] =
+    neighborLinks.length > 0
+      ? neighborLinks
+      : triplets.slice(0, 12).map((triplet) => ({
+          source: triplet.subject,
+          target: triplet.object,
+          relation: triplet.relation || "RELATED_TO"
+        }));
+
   const distinctEntities = Array.from(new Set(entityNames.map((entityName) => entityName.trim()).filter(Boolean)));
   const pathRecords: GraphPath[] = [];
 
   if (distinctEntities.length >= 2) {
-    const path = findShortestPath(triplets, distinctEntities[0], distinctEntities[1]);
-    if (path) {
-      pathRecords.push(path);
+    for (let startIndex = 0; startIndex < distinctEntities.length - 1 && pathRecords.length === 0; startIndex += 1) {
+      for (let endIndex = startIndex + 1; endIndex < distinctEntities.length; endIndex += 1) {
+        const path = findShortestPath(
+          triplets,
+          distinctEntities[startIndex],
+          distinctEntities[endIndex]
+        );
+        if (path) {
+          pathRecords.push(path);
+          break;
+        }
+      }
     }
   }
 
@@ -214,7 +232,7 @@ function buildMockGraph(documents: MockWorkspaceDocument[], entityNames: string[
             highlighted: true
           }) satisfies GraphNode
       ),
-      ...[...neighborLinks, ...highlightedPathLinks].flatMap((link) => [
+      ...[...graphLinks, ...highlightedPathLinks].flatMap((link) => [
         {
           id: link.source,
           label: link.source,
@@ -235,7 +253,7 @@ function buildMockGraph(documents: MockWorkspaceDocument[], entityNames: string[
   return {
     nodes,
     links: uniqueBy(
-      [...neighborLinks, ...highlightedPathLinks],
+      [...graphLinks, ...highlightedPathLinks],
       (link) => `${link.source}|${link.relation}|${link.target}|${link.highlighted ? "1" : "0"}`
     ),
     paths: pathRecords,
@@ -336,7 +354,31 @@ export function queryMockWorkspace(
 
   const question = input.question.trim();
   const embedding = mockEmbedText(question);
-  const entityNames = mockExtractQuestionEntities(question);
+  const rawEntityNames = mockExtractQuestionEntities(question);
+  const normalizedQuestion = normalizeName(question);
+  const documentEntityNames = Array.from(
+    new Set(relevantDocuments.flatMap((document) => document.chunks.flatMap((chunk) => chunk.entityNames)))
+  );
+  const titleMatchedEntities = relevantDocuments.flatMap((document) =>
+    document.title && normalizedQuestion.includes(normalizeName(document.title))
+      ? document.chunks.flatMap((chunk) => chunk.entityNames).slice(0, 8)
+      : []
+  );
+  const resolvedDocumentEntities = documentEntityNames.filter((entityName) => {
+    const normalizedEntity = normalizeName(entityName);
+    if (normalizedQuestion.includes(normalizedEntity)) {
+      return true;
+    }
+
+    const entityTokens = normalizedEntity.split(/\s+/).filter((token) => token.length >= 3);
+    return rawEntityNames.some((rawEntity) => {
+      const rawTokens = normalizeName(rawEntity).split(/\s+/).filter((token) => token.length >= 3);
+      return entityTokens.some((token) => rawTokens.includes(token));
+    });
+  });
+  const entityNames = Array.from(
+    new Set([...resolvedDocumentEntities, ...titleMatchedEntities, ...rawEntityNames])
+  ).slice(0, 12);
 
   const vectorMatches =
     input.retrievalMode === "graph"
