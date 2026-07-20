@@ -39,7 +39,7 @@ export function KnowledgeMap({ graph }: KnowledgeMapProps) {
 
       setDimensions({
         width: Math.max(320, Math.floor(entry.contentRect.width)),
-        height: 420
+        height: Math.max(420, Math.floor(entry.contentRect.height))
       });
     });
 
@@ -48,7 +48,7 @@ export function KnowledgeMap({ graph }: KnowledgeMapProps) {
   }, [graph.nodes.length]);
 
   return (
-    <div ref={wrapperRef}>
+    <div className="knowledge-map-root" ref={wrapperRef}>
       {graph.nodes.length === 0 ? (
         <div className="empty-state">
           <div>

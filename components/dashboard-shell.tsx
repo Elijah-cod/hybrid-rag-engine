@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, startTransition, useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import { KnowledgeMap } from "@/components/knowledge-map";
 import {
@@ -24,6 +25,47 @@ import type {
 
 const MIN_REQUEST_INTERVAL_MS = 4_500;
 const MOCK_STORAGE_KEY = "insightgraph.mock-workspace.v2";
+
+type WorkspaceView = "map" | "query" | "sources" | "schema" | "traces" | "settings";
+
+type IconName =
+  | "map"
+  | "database"
+  | "schema"
+  | "trace"
+  | "settings"
+  | "search"
+  | "play"
+  | "plus"
+  | "spark"
+  | "history"
+  | "person"
+  | "document"
+  | "arrow";
+
+function AppIcon({ name, size = 20 }: { name: IconName; size?: number }) {
+  const paths: Record<IconName, ReactNode> = {
+    map: <><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="m7.8 7 3 8M16.2 7l-3 8M8 6h8"/></>,
+    database: <><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></>,
+    schema: <><rect x="3" y="3" width="6" height="6"/><rect x="15" y="15" width="6" height="6"/><rect x="15" y="3" width="6" height="6"/><path d="M9 6h6M18 9v6M6 9v6h9"/></>,
+    trace: <><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/><path d="m3 7 6-4 6 7 6-5"/></>,
+    settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></>,
+    search: <><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></>,
+    play: <path d="m8 5 11 7-11 7Z"/>,
+    plus: <path d="M12 5v14M5 12h14"/>,
+    spark: <><path d="m12 3 1.2 4.8L18 9l-4.8 1.2L12 15l-1.2-4.8L6 9l4.8-1.2Z"/><path d="m19 15 .6 2.4L22 18l-2.4.6L19 21l-.6-2.4L16 18l2.4-.6Z"/></>,
+    history: <><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></>,
+    person: <><circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/></>,
+    document: <><path d="M6 2h8l4 4v16H6Z"/><path d="M14 2v5h5M9 13h6M9 17h6"/></>,
+    arrow: <><path d="M5 12h14M14 7l5 5-5 5"/></>
+  };
+
+  return (
+    <svg aria-hidden="true" className="app-icon" fill="none" height={size} viewBox="0 0 24 24" width={size}>
+      <g stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8">{paths[name]}</g>
+    </svg>
+  );
+}
 
 const starterMessages: ChatMessage[] = [
   {
@@ -89,21 +131,6 @@ const freeAiToolkit = [
     mode: "Fallback",
     href: "https://huggingface.co/docs/inference-providers/index",
     blurb: "Useful when you want a free experimentation surface for model comparisons and backup inference paths."
-  }
-] as const;
-
-const fallbackPlaybooks = [
-  {
-    title: "Quota capped",
-    detail: "Switch to Mock AI and keep exploring locally. The browser workspace keeps ingestion, retrieval, and graph generation moving without live model calls."
-  },
-  {
-    title: "Vector store paused",
-    detail: "Seed or ingest sources into the local mock workspace, then continue with semantic search simulation while Supabase is unavailable."
-  },
-  {
-    title: "Graph DB paused",
-    detail: "Use vector mode for live evidence, or use Mock AI to build graph paths deterministically from the ingested source text."
   }
 ] as const;
 
@@ -195,6 +222,8 @@ function parseMockWorkspace(raw: string | null) {
 }
 
 export function DashboardShell() {
+  const [activeView, setActiveView] = useState<WorkspaceView>("map");
+  const [showIngestPanel, setShowIngestPanel] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>(starterMessages);
   const [question, setQuestion] = useState("");
   const [pending, setPending] = useState(false);
@@ -384,8 +413,6 @@ export function DashboardShell() {
     [graph]
   );
 
-  const recentIngestSources = useMemo(() => displayLibraryItems.slice(0, 6), [displayLibraryItems]);
-  const latestIngestLabel = ingestResult?.title || ingestResult?.sourceId || "No source seeded yet";
   const activeSourceLabel =
     displayLibraryDetail?.source.title ||
     ingestResult?.title ||
@@ -923,742 +950,330 @@ export function DashboardShell() {
     }
   }
 
-  const librarySurfaceLabel = useMockAi ? "Mock Workspace" : "Live Library";
+  const latestAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
+  const traceQuestions = messages.filter((message) => message.role === "user");
+  const activeNode = graph.nodes.find((node) => node.highlighted) ?? graph.nodes[0] ?? null;
+  const totalChunks = displayLibraryItems.reduce((sum, item) => sum + item.chunkCount, 0);
+  const navItems: Array<{ id: WorkspaceView; label: string; icon: IconName }> = [
+    { id: "map", label: "Knowledge Map", icon: "map" },
+    { id: "sources", label: "Data Sources", icon: "database" },
+    { id: "schema", label: "Schema Builder", icon: "schema" },
+    { id: "traces", label: "Trace Logs", icon: "trace" },
+    { id: "settings", label: "Settings", icon: "settings" }
+  ];
 
-  return (
-    <main className="page-shell">
-      <section className="command-deck panel">
-        <div className="command-grid">
-          <div className="command-copy">
-            <div className="deck-topline">
-              <span className="eyebrow">Hybrid Retrieval Operating System</span>
-              <span className={`status-dot ${useMockAi ? "status-dot-mock" : "status-dot-live"}`}>
-                {useMockAi ? "Browser mock workspace" : "Live connector path"}
-              </span>
-            </div>
+  function renderModeControl() {
+    return (
+      <div className="mode-control" aria-label="Retrieval mode">
+        {(["hybrid", "vector", "graph"] as RetrievalMode[]).map((mode) => (
+          <button
+            className={retrievalMode === mode ? "is-active" : ""}
+            key={mode}
+            onClick={() => setRetrievalMode(mode)}
+            type="button"
+          >
+            {mode}
+          </button>
+        ))}
+      </div>
+    );
+  }
 
-            <div className="brand-lockup">
-              <Image
-                alt="InsightGraph logo"
-                className="hero-logo"
-                height={84}
-                priority
-                src="/insightgraph-logo.jpeg"
-                width={84}
-              />
-              <div className="brand-copy">
-                <p className="brand-kicker">InsightGraph v0.2</p>
-                <h1>Inspectable answers, even when free-tier AI gets flaky.</h1>
-              </div>
-            </div>
-
-            <p className="deck-lede">
-              Ingest unstructured sources, expose the entity graph, and compare semantic evidence with
-              relationship structure in one startup-ready workspace. When live services are unavailable,
-              Mock AI keeps the demo moving with browser-only ingestion, retrieval, and graph synthesis.
-            </p>
-
-            <div className="command-actions">
-              <div className="segmented-control">
-                <button
-                  className={`segment-button ${!useMockAi ? "segment-button-active" : ""}`}
-                  onClick={() => setUseMockAi(false)}
-                  type="button"
-                >
-                  Live AI
-                </button>
-                <button
-                  className={`segment-button ${useMockAi ? "segment-button-active" : ""}`}
-                  onClick={() => setUseMockAi(true)}
-                  type="button"
-                >
-                  Mock AI
-                </button>
-              </div>
-
-              <button
-                className="ghost-button"
-                onClick={() => {
-                  setUseMockAi(true);
-                  seedMockWorkspace();
-                }}
-                type="button"
-              >
-                Seed Local Demo
-              </button>
-
-              {useMockAi ? (
-                <button className="ghost-button" onClick={() => clearMockWorkspace()} type="button">
-                  Clear Mock Data
-                </button>
-              ) : (
-                <a className="ghost-button" href="#ingestion">
-                  Open Ingestion Console
-                </a>
-              )}
-            </div>
-
-            <div className="status-ribbon" data-variant={statusVariant}>
-              <span className="status-ribbon-label">System status</span>
-              <span>{statusText}</span>
-            </div>
-          </div>
-
-          <div className="ops-rail">
-            <div className="ops-card ops-card-spotlight">
-              <div className="ops-card-header">
-                <span className="ops-kicker">Workspace runway</span>
-                <span className="badge">{useMockAi ? "local-first" : "live"}</span>
-              </div>
-              <div className="ops-metrics">
-                <div className="ops-metric">
-                  <span>Sources</span>
-                  <strong>{displayLibraryItems.length}</strong>
-                </div>
-                <div className="ops-metric">
-                  <span>Scope</span>
-                  <strong>{effectiveActiveChatSourceId ?? "all"}</strong>
-                </div>
-                <div className="ops-metric">
-                  <span>Mode</span>
-                  <strong>{retrievalMode}</strong>
-                </div>
-                <div className="ops-metric">
-                  <span>Latest ingest</span>
-                  <strong>{latestIngestLabel}</strong>
-                </div>
-              </div>
-              <p className="ops-summary">
-                {useMockAi
-                  ? "The current session runs entirely from the browser workspace. No Gemini, Supabase, or Neo4j round-trips are required for chat or ingestion."
-                  : "The current session uses the production connector path for embeddings, retrieval, and graph traversal."}
-              </p>
-            </div>
-
-            <div className="ops-card">
-              <div className="ops-card-header">
-                <span className="ops-kicker">Free AI toolkit</span>
-                <span className="badge">verified options</span>
-              </div>
-              <div className="toolkit-list">
-                {freeAiToolkit.map((tool) => (
-                  <Link
-                    className="tool-card"
-                    href={tool.href}
-                    key={tool.name}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    <div className="tool-card-header">
-                      <strong>{tool.name}</strong>
-                      <span>{tool.mode}</span>
-                    </div>
-                    <p>{tool.blurb}</p>
-                  </Link>
-                ))}
-              </div>
-            </div>
-
-            <div className="ops-card">
-              <div className="ops-card-header">
-                <span className="ops-kicker">Fallback playbooks</span>
-                <span className="badge">demo-safe</span>
-              </div>
-              <div className="playbook-list">
-                {fallbackPlaybooks.map((playbook, index) => (
-                  <div className="playbook-row" key={playbook.title}>
-                    <span>{String(index + 1).padStart(2, "0")}</span>
-                    <div>
-                      <strong>{playbook.title}</strong>
-                      <p>{playbook.detail}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+  function renderComposer(compact = false) {
+    return (
+      <form className={`query-composer ${compact ? "query-composer-compact" : ""}`} onSubmit={handleSubmit}>
+        <div className="query-input-row">
+          <span className="composer-plus"><AppIcon name="plus" size={18} /></span>
+          <textarea
+            aria-label="Ask a hybrid retrieval question"
+            onChange={(event) => setQuestion(event.target.value)}
+            placeholder="Ask about a project, person, or concept..."
+            value={question}
+          />
+          <span className="composer-mode">{retrievalMode}</span>
+          <button className="primary-icon-button" disabled={!canSubmitQuestion} type="submit">
+            <AppIcon name="arrow" size={20} />
+            <span className="sr-only">Ask InsightGraph</span>
+          </button>
         </div>
-      </section>
-
-      <section className="workspace-grid">
-        <article className="panel query-panel">
-          <header className="panel-header">
-            <div className="panel-title">
-              <h2>Query Engine</h2>
-              <p>Ask for explanations that can be defended with both chunk evidence and graph context.</p>
-            </div>
-            <div className="badge">{pending ? "retrieving" : "ready"}</div>
-          </header>
-
-          <div className="messages">
-            {messages.map((message) => (
-              <div
-                className={`message ${message.role === "user" ? "message-user" : "message-assistant"}`}
-                key={message.id}
-              >
-                <div className="message-label">{message.role === "user" ? "Prompt" : "Response"}</div>
-                <ReactMarkdown>{message.content}</ReactMarkdown>
-                {message.sources && message.sources.length > 0 ? (
-                  <div className="sources">
-                    <strong>Evidence trace</strong>
-                    <div>
-                      {message.sources.map((source) => (
-                        <span className="source-chip" key={source.id}>
-                          {source.title || source.sourceId} · {(source.similarity * 100).toFixed(1)}%
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
+        {!compact ? (
+          <div className="prompt-chips">
+            {quickQuestions.map((prompt) => (
+              <button key={prompt} onClick={() => applySuggestedQuestion(prompt)} type="button">
+                {prompt.length > 42 ? `${prompt.slice(0, 42)}...` : prompt}
+              </button>
             ))}
           </div>
+        ) : null}
+      </form>
+    );
+  }
 
-          <div className="composer">
-            <form className="composer-shell" onSubmit={handleSubmit}>
-              <div className="composer-topline">
-                <div className="segmented-control">
-                  {(["hybrid", "vector", "graph"] as RetrievalMode[]).map((mode) => (
-                    <button
-                      className={`segment-button ${retrievalMode === mode ? "segment-button-active" : ""}`}
-                      key={mode}
-                      onClick={() => setRetrievalMode(mode)}
-                      type="button"
-                    >
-                      {mode}
-                    </button>
-                  ))}
-                </div>
-                {effectiveActiveChatSourceId ? (
-                  <div className="scope-actions">
-                    <span className="scope-pill">Scoped to {effectiveActiveChatSourceId}</span>
-                    <button className="ghost-button" onClick={() => setActiveChatSourceId(null)} type="button">
-                      Clear scope
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="quick-question-strip">
-                {quickQuestions.map((prompt) => (
-                  <button
-                    className="question-prompt-button"
-                    key={prompt}
-                    onClick={() => setQuestion(prompt)}
-                    type="button"
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-
-              <textarea
-                aria-label="Ask a hybrid retrieval question"
-                onChange={(event) => setQuestion(event.target.value)}
-                placeholder='Ask about a project, person, or concept. Example: "How is Project Atlas connected to the CEO&apos;s 2025 goals?"'
-                value={question}
-              />
-
-              <div className="composer-actions">
-                <div className="composer-hint">
-                  {pending
-                    ? describeRetrievalMode(retrievalMode)
-                    : cooldownRemaining > 0
-                      ? `Cooldown active for ${cooldownSeconds}s.`
-                      : useMockAi
-                        ? "Mock AI runs in the browser workspace with deterministic extraction, embeddings, and graph synthesis."
-                        : "Live AI uses your configured Gemini, Supabase, and Neo4j connectors. A small cooldown reduces free-tier rate-limit spikes."}
-                </div>
-                <button className="submit-button" disabled={!canSubmitQuestion} type="submit">
-                  {pending ? "Thinking..." : "Ask InsightGraph"}
-                </button>
-              </div>
-            </form>
+  function renderEvidenceInspector() {
+    return (
+      <aside className="inspector-panel">
+        <div className="inspector-heading">
+          <div>
+            <span className="technical-label">Selected entity</span>
+            <h2>{activeNode?.label ?? "Awaiting query"}</h2>
           </div>
-        </article>
+          <span className="type-badge">{activeNode?.type ?? "ENTITY"}</span>
+        </div>
+        <div className="inspector-meta">
+          Node ID: {activeNode?.id ?? "Run a query to inspect a node"}
+        </div>
+        <div className="inspector-section">
+          <h3><AppIcon name="document" size={16} /> Semantic Evidence</h3>
+          {latestSources.length > 0 ? latestSources.slice(0, 3).map((source) => (
+            <article className="evidence-block" key={source.id}>
+              <p>{source.content.slice(0, 210)}{source.content.length > 210 ? "..." : ""}</p>
+              <footer>
+                <span>{source.title || source.sourceId}</span>
+                <strong>{Math.round(source.similarity * 100)}%</strong>
+              </footer>
+            </article>
+          )) : <p className="empty-copy">Semantic matches appear here after a vector or hybrid query.</p>}
+        </div>
+        <div className="inspector-section">
+          <h3><AppIcon name="schema" size={16} /> Graph Paths</h3>
+          {graph.paths.length > 0 ? graph.paths.map((path, index) => (
+            <div className="path-trace" key={`${path.nodes.join("-")}-${index}`}>
+              {path.nodes.map((node, nodeIndex) => (
+                <span key={`${node}-${nodeIndex}`}>
+                  <strong>{node}</strong>
+                  {path.relationships[nodeIndex] ? <><i>→</i><em>{path.relationships[nodeIndex]}</em><i>→</i></> : null}
+                </span>
+              ))}
+            </div>
+          )) : <p className="empty-copy">Relationship paths will appear when named entities connect.</p>}
+        </div>
+        <div className="trace-terminal">
+          <div><span>Latest Trace</span><strong>{pending ? "RUNNING" : "200 OK"}</strong></div>
+          <pre>{JSON.stringify({ mode: retrievalMode, nodes: graphStats.nodes, edges: graphStats.links, sources: latestSources.length }, null, 2)}</pre>
+        </div>
+      </aside>
+    );
+  }
 
-        <aside className="panel map-panel">
-          <header className="panel-header">
-            <div className="panel-title">
-              <h2>Knowledge Map</h2>
-              <p>Trace the entities, edges, and shortest paths returned by the current query.</p>
-            </div>
-            <div className="badge">{graph.relatedEntities.length} active entities</div>
-          </header>
-
-          <div className="map-summary">
-            <div className="stat-card">
-              <span>Nodes</span>
-              <strong>{graphStats.nodes}</strong>
-            </div>
-            <div className="stat-card">
-              <span>Links</span>
-              <strong>{graphStats.links}</strong>
-            </div>
-            <div className="stat-card">
-              <span>Paths</span>
-              <strong>{graphStats.paths}</strong>
-            </div>
+  function renderMapView() {
+    return (
+      <div className="map-view">
+        <section className="graph-stage">
+          <div className="graph-toolbar">
+            <button aria-label="Search graph" type="button"><AppIcon name="search" size={17} /></button>
+            <button aria-label="Center graph" type="button"><AppIcon name="map" size={17} /></button>
+            <span>{graphStats.nodes} nodes · {graphStats.links} edges</span>
           </div>
+          <div className="graph-live"><span /> {useMockAi ? "Local Graph" : "Graph Live"}</div>
+          <KnowledgeMap graph={graph} />
+          <div className="map-composer-wrap">{renderComposer()}</div>
+        </section>
+        {renderEvidenceInspector()}
+      </div>
+    );
+  }
 
-          <div className="map-shell">
-            <KnowledgeMap graph={graph} />
+  function renderQueryView() {
+    return (
+      <div className="query-view">
+        <section className="query-main">
+          <div className="view-heading compact-heading">
+            <div><span className="technical-label">Cypher / semantic workspace</span><h1>Query Engine</h1></div>
+            <span className={`health-chip ${pending ? "is-running" : ""}`}>{pending ? "Retrieving" : "Syntax Ready"}</span>
           </div>
-
-          <div className="evidence-grid">
-            <div className="evidence-card">
-              <h3>Graph paths</h3>
-              {graph.paths.length > 0 ? (
-                <div className="path-list">
-                  {graph.paths.map((path, index) => (
-                    <div className="path-card" key={`${path.nodes.join("->")}-${index}`}>
-                      <strong>Path {index + 1}</strong>
-                      <p>{path.nodes.join(" → ")}</p>
-                      <div>
-                        {path.relationships.map((relation, relationIndex) => (
-                          <span className="source-chip" key={`${relation}-${relationIndex}`}>
-                            {relation}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+          <div className="conversation-stream">
+            {messages.map((message) => (
+              <article className={`conversation-message is-${message.role}`} key={message.id}>
+                <span className="message-avatar"><AppIcon name={message.role === "user" ? "person" : "spark"} size={18} /></span>
+                <div>
+                  <span className="technical-label">{message.role === "user" ? "Prompt" : "InsightGraph"}</span>
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                  {message.sources?.length ? <div className="source-tags">{message.sources.map((source) => <span key={source.id}>{source.title || source.sourceId} · {Math.round(source.similarity * 100)}%</span>)}</div> : null}
                 </div>
-              ) : (
-                <p className="ingest-muted">
-                  No path has been drawn yet. Ask a question with named entities to activate the graph context.
-                </p>
-              )}
-            </div>
-
-            <div className="evidence-card">
-              <h3>Semantic evidence</h3>
-              {latestSources.length > 0 ? (
-                <div className="evidence-list">
-                  {latestSources.map((source) => (
-                    <div className="evidence-row" key={source.id}>
-                      <div className="evidence-heading">
-                        <strong>{source.title || source.sourceId}</strong>
-                        <span>{(source.similarity * 100).toFixed(1)}%</span>
-                      </div>
-                      <p>
-                        {source.content.slice(0, 200)}
-                        {source.content.length > 200 ? "..." : ""}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="ingest-muted">
-                  Vector matches for the latest question will appear here after retrieval runs.
-                </p>
-              )}
-            </div>
+              </article>
+            ))}
+          </div>
+          <div className="query-footer">
+            {renderModeControl()}
+            {renderComposer(true)}
+            <p>{cooldownRemaining > 0 ? `Ready again in ${cooldownSeconds}s` : describeRetrievalMode(retrievalMode)}</p>
+          </div>
+        </section>
+        <aside className="prompt-studio">
+          <div className="section-bar"><h2><AppIcon name="spark" size={18} /> Prompt Studio</h2><span>AI Assisted</span></div>
+          <div className="prompt-studio-body">
+            <span className="technical-label">Suggested prompts</span>
+            {quickQuestions.map((prompt) => (
+              <button key={prompt} onClick={() => setQuestion(prompt)} type="button">
+                <AppIcon name="spark" size={16} /><span>{prompt}</span>
+              </button>
+            ))}
+          </div>
+          <div className="query-results-mini">
+            <span className="technical-label">Current result</span>
+            <p>{latestAssistantMessage?.content.slice(0, 420) ?? "Run a query to see the generated answer and evidence trace."}</p>
+            <div className="mini-stats"><span>{latestSources.length} sources</span><span>{graphStats.nodes} nodes</span><span>{graphStats.paths} paths</span></div>
           </div>
         </aside>
-      </section>
+      </div>
+    );
+  }
 
-      <section className="operations-grid">
-        <section className="panel ingest-panel" id="ingestion">
-          <header className="panel-header">
-            <div className="panel-title">
-              <h2>Ingestion Console</h2>
-              <p>Turn pasted text, files, or article URLs into chunked evidence and extracted relationships.</p>
-            </div>
-            <div className="badge">{useMockAi ? "browser ingest" : ingesting ? "writing to stores" : "ready"}</div>
-          </header>
+  function renderIngestionPanel() {
+    return (
+      <form className="ingestion-drawer" onSubmit={handleIngest}>
+        <div className="drawer-heading">
+          <div><span className="technical-label">New source</span><h2>Ingestion Console</h2></div>
+          <button aria-label="Close ingestion console" onClick={() => setShowIngestPanel(false)} type="button">×</button>
+        </div>
+        <div className="preset-row">
+          {demoSources.map((demoSource) => <button key={demoSource.sourceId} onClick={() => loadDemoSource(demoSource.sourceId)} type="button">{demoSource.title}</button>)}
+        </div>
+        <div className="form-grid">
+          <label><span>Source ID</span><input onChange={(event) => { setSourceIdTouched(true); setSourceId(event.target.value); }} placeholder="auto-generated" value={sourceId} /></label>
+          <label><span>Title</span><input onChange={(event) => { const nextTitle = event.target.value; setSourceTitleTouched(true); setSourceTitle(nextTitle); if (!sourceIdTouched) setSourceId(makeUniqueSourceId(nextTitle, displayLibraryItems.map((item) => item.sourceId))); }} placeholder="Document title" value={sourceTitle} /></label>
+          <label><span>Source type</span><select onChange={(event) => setSourceType(event.target.value)} value={sourceType}><option value="article">Article</option><option value="data">Data</option><option value="pdf">PDF</option><option value="memo">Memo</option><option value="notes">Notes</option></select></label>
+        </div>
+        <div className="article-row">
+          <label><span>Article URL</span><input onChange={(event) => setArticleUrl(event.target.value)} placeholder="https://example.com/article" value={articleUrl} /></label>
+          <button disabled={articleLoading || !articleUrl.trim()} onClick={() => void handleArticleLoad()} type="button">{articleLoading ? "Loading" : "Load"}</button>
+        </div>
+        <label className="source-file-picker">
+          <input accept=".pdf,.txt,.md,.csv,.json" onChange={(event) => void handleFileSelected(event.target.files?.[0] ?? null)} type="file" />
+          <AppIcon name="document" size={20} /><span>{selectedFileName ?? "Choose PDF, TXT, MD, CSV, or JSON"}</span>
+        </label>
+        <label className="raw-text-field"><span>Raw text</span><textarea aria-label="Raw document text for ingestion" onChange={(event) => { const nextText = event.target.value; setDocumentText(nextText); applyAutoDerivedFields(nextText, sourceTitle); }} placeholder="Paste source text here..." value={documentText} /></label>
+        {ingestResult ? <div className="ingest-summary"><span>{ingestResult.chunkCount} chunks</span><span>{ingestResult.entityCount} entities</span><span>{ingestResult.tripletCount} triplets</span></div> : null}
+        {ingestError ? <div className="inline-error">{ingestError}</div> : null}
+        <button className="primary-button" disabled={ingesting || !sourceId.trim() || !documentText.trim()} type="submit">{ingesting ? "Ingesting..." : useMockAi ? "Ingest Locally" : "Ingest Source"}</button>
+      </form>
+    );
+  }
 
-          <div className="ingest-grid">
-            <form className="composer-shell ingest-form" onSubmit={handleIngest}>
-              <div className="ingest-toolbar">
-                <div className="preset-group">
-                  <span className="preset-label">Starter demos</span>
-                  <div className="preset-strip">
-                    {demoSources.map((demoSource) => (
-                      <button
-                        className="preset-button"
-                        key={demoSource.sourceId}
-                        onClick={() => loadDemoSource(demoSource.sourceId)}
-                        type="button"
-                      >
-                        {demoSource.title}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {recentIngestSources.length > 0 ? (
-                  <div className="preset-group">
-                    <span className="preset-label">Recent workspace sources</span>
-                    <div className="preset-strip">
-                      {recentIngestSources.map((item) => (
-                        <button
-                          className="preset-button preset-button-secondary"
-                          key={item.sourceId}
-                          onClick={() => void loadSourceIntoForm(item.sourceId)}
-                          type="button"
-                        >
-                          {item.title || item.sourceId}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="field-grid">
-                <label className="field">
-                  <span>Source ID</span>
-                  <input
-                    onChange={(event) => {
-                      setSourceIdTouched(true);
-                      setSourceId(event.target.value);
-                    }}
-                    placeholder="auto-generated from title"
-                    value={sourceId}
-                  />
-                </label>
-                <label className="field">
-                  <span>Title</span>
-                  <input
-                    onChange={(event) => {
-                      setSourceTitleTouched(true);
-                      const nextTitle = event.target.value;
-                      setSourceTitle(nextTitle);
-
-                      if (!sourceIdTouched) {
-                        const baseTitle = nextTitle.trim() || inferTitleFromText(documentText);
-                        setSourceId(
-                          baseTitle
-                            ? makeUniqueSourceId(baseTitle, displayLibraryItems.map((item) => item.sourceId))
-                            : ""
-                        );
-                      }
-                    }}
-                    placeholder="auto-generated from text or file name"
-                    value={sourceTitle}
-                  />
-                </label>
-                <label className="field">
-                  <span>Source type</span>
-                  <select onChange={(event) => setSourceType(event.target.value)} value={sourceType}>
-                    <option value="article">Article</option>
-                    <option value="data">Data</option>
-                    <option value="pdf">PDF</option>
-                    <option value="memo">Memo</option>
-                    <option value="notes">Notes</option>
-                  </select>
-                </label>
-              </div>
-
-              <div className="article-loader">
-                <label className="field">
-                  <span>Article URL</span>
-                  <input
-                    onChange={(event) => setArticleUrl(event.target.value)}
-                    placeholder="https://example.com/article"
-                    value={articleUrl}
-                  />
-                </label>
-                <button
-                  className="ghost-button"
-                  disabled={articleLoading || !articleUrl.trim()}
-                  onClick={() => void handleArticleLoad()}
-                  type="button"
-                >
-                  {articleLoading ? "Loading article..." : "Load Article"}
-                </button>
-              </div>
-
-              <label className="field">
-                <span>Raw text</span>
-                <div className="file-picker-row">
-                  <label className="file-picker">
-                    <input
-                      accept=".pdf,.txt,.md,.csv,.json"
-                      onChange={(event) => void handleFileSelected(event.target.files?.[0] ?? null)}
-                      type="file"
-                    />
-                    Load source file
-                  </label>
-                  <span className="file-picker-hint">
-                    {selectedFileName
-                      ? `Loaded: ${selectedFileName}`
-                      : "Supports .pdf, .txt, .md, .csv, and .json files."}
-                  </span>
-                </div>
-                <textarea
-                  aria-label="Raw document text for ingestion"
-                  onChange={(event) => {
-                    const nextText = event.target.value;
-                    setDocumentText(nextText);
-                    applyAutoDerivedFields(nextText, sourceTitle);
-                  }}
-                  placeholder="Paste extracted text from a PDF, article, transcript, or internal memo."
-                  value={documentText}
-                />
-              </label>
-
-              <div className="composer-actions">
-                <div className="composer-hint">
-                  {ingesting
-                    ? "Chunking text, extracting entities, building embeddings, and updating the selected workspace."
-                    : useMockAi
-                      ? "Mock ingestion stays in the browser. It is the fastest way to demo the product without connector cost or downtime."
-                      : "Live ingestion runs server-side so Neo4j and Supabase credentials never leave the backend."}
-                </div>
-                <button
-                  className="submit-button"
-                  disabled={ingesting || !sourceId.trim() || !documentText.trim()}
-                  type="submit"
-                >
-                  {ingesting ? "Ingesting..." : useMockAi ? "Ingest Locally" : "Ingest Document"}
-                </button>
-              </div>
-            </form>
-
-            <div className="ingest-results">
-              <div className="stat-strip">
-                <div className="stat-card">
-                  <span>Chunks</span>
-                  <strong>{ingestResult?.chunkCount ?? 0}</strong>
-                </div>
-                <div className="stat-card">
-                  <span>Entities</span>
-                  <strong>{ingestResult?.entityCount ?? 0}</strong>
-                </div>
-                <div className="stat-card">
-                  <span>Triplets</span>
-                  <strong>{ingestResult?.tripletCount ?? 0}</strong>
-                </div>
-              </div>
-
-              <div className="ingest-card">
-                <h3>Latest ingest</h3>
-                <p>
-                  {ingestResult
-                    ? `${ingestResult.title || ingestResult.sourceId} is ready for chat, evidence review, and graph exploration.`
-                    : "No source has been ingested yet. Seed a demo or paste your own document to activate the workspace."}
-                </p>
-              </div>
-
-              <div className="ingest-card">
-                <h3>Entity preview</h3>
-                <div>
-                  {ingestResult?.entities.length ? (
-                    ingestResult.entities.slice(0, 16).map((entity) => (
-                      <span className="source-chip" key={entity}>
-                        {entity}
-                      </span>
-                    ))
-                  ) : (
-                    <p className="ingest-muted">Entity names from the latest ingest will appear here.</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="ingest-card">
-                <h3>Chunk trace</h3>
-                {ingestResult?.chunks.length ? (
-                  <div className="chunk-list">
-                    {ingestResult.chunks.map((chunk) => (
-                      <div className="chunk-row" key={chunk.chunkIndex}>
-                        <span>Chunk {chunk.chunkIndex + 1}</span>
-                        <span>{chunk.entityCount} entities</span>
-                        <span>{chunk.tripletCount} triplets</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="ingest-muted">Per-chunk extraction details will appear after ingestion.</p>
-                )}
-              </div>
-
-              {ingestError ? <div className="status-ribbon" data-variant="error">{ingestError}</div> : null}
-            </div>
-          </div>
-        </section>
-
-        <section className="panel library-panel">
-          <header className="panel-header">
-            <div className="panel-title">
-              <h2>{librarySurfaceLabel}</h2>
-              <p>
-                {useMockAi
-                  ? "Inspect local mock sources, chunk previews, and guided prompts without calling external services."
-                  : "Inspect live sources stored in Supabase and use them to scope chat and rehydrate the ingestion form."}
-              </p>
-            </div>
-            {useMockAi ? (
-              <div className="library-actions">
-                <button className="ghost-button" onClick={() => seedMockWorkspace()} type="button">
-                  Seed demos
-                </button>
-                <button className="ghost-button" onClick={() => clearMockWorkspace()} type="button">
-                  Reset
-                </button>
-              </div>
-            ) : (
-              <button className="ghost-button" onClick={() => void loadRemoteLibrary()} type="button">
-                {libraryPending ? "Refreshing..." : "Refresh Library"}
+  function renderSourcesView() {
+    return (
+      <div className="sources-view">
+        <div className="view-heading">
+          <div><h1>Data Sources</h1><p>Manage documents, structured data, and APIs feeding the semantic engine.</p></div>
+          <button className="primary-button" onClick={() => setShowIngestPanel(true)} type="button"><AppIcon name="plus" size={18} /> Add Source</button>
+        </div>
+        <div className="source-metrics">
+          <div><span>Total Sources</span><strong>{displayLibraryItems.length}</strong></div>
+          <div><span>Active Chunks</span><strong>{totalChunks}</strong></div>
+          <div><span>Graph Entities</span><strong>{ingestResult?.entityCount ?? graphStats.nodes}</strong></div>
+          <div><span>Pipeline Mode</span><strong>{useMockAi ? "Local" : "Live"}</strong></div>
+        </div>
+        <div className={`sources-layout ${showIngestPanel ? "has-drawer" : ""}`}>
+          <section className="source-table">
+            <div className="source-table-head"><span>Source document</span><span>Type</span><span>Status</span><span>Chunks</span><span>Updated</span></div>
+            {displayLibraryItems.length > 0 ? displayLibraryItems.map((item) => (
+              <button className={currentLibrarySourceId === item.sourceId ? "is-selected" : ""} key={item.sourceId} onClick={() => { setSelectedLibrarySourceId(item.sourceId); if (!useMockAi) void loadRemoteLibraryDetail(item.sourceId); }} type="button">
+                <span className="source-name"><AppIcon name="document" size={19} /><span><strong>{item.title || item.sourceId}</strong><small>ID: {item.sourceId}</small></span></span>
+                <span className="type-badge">{item.sourceType ?? "text"}</span>
+                <span className="sync-status"><i /> Synced</span>
+                <strong>{item.chunkCount}</strong>
+                <span>{new Date(item.latestIngestedAt).toLocaleDateString()}</span>
               </button>
-            )}
-          </header>
+            )) : <div className="source-empty"><AppIcon name="database" size={32} /><h3>No sources in this workspace</h3><p>{libraryPending ? "Checking the connected library..." : "Add a source or switch to Mock AI and seed the local demo."}</p></div>}
+            {libraryDetailPending ? <div className="source-loading">Loading selected source...</div> : null}
+            {libraryError && !useMockAi ? <div className="inline-error">The live source library is unavailable. Switch to Mock AI to continue exploring locally.</div> : null}
+            {libraryDetailError && !useMockAi ? <div className="inline-error">The selected source could not be loaded. Refresh the library and try again.</div> : null}
+          </section>
+          {showIngestPanel ? renderIngestionPanel() : null}
+        </div>
+        {displayLibraryDetail && !showIngestPanel ? (
+          <section className="source-detail-strip">
+            <div><span className="technical-label">Selected source</span><h2>{displayLibraryDetail.source.title || displayLibraryDetail.source.sourceId}</h2></div>
+            <div><div className="source-tags">{displayLibraryDetail.chunks.flatMap((chunk) => chunk.entityNames).slice(0, 8).map((name) => <span key={name}>{name}</span>)}</div><div className="source-tags prompt-source-tags">{suggestedQuestions.slice(0, 1).map((prompt) => <button key={prompt} onClick={() => { applySuggestedQuestion(prompt); setActiveView("query"); }} type="button">{prompt}</button>)}</div></div>
+            <div className="source-detail-actions"><button onClick={() => void loadSourceIntoForm(displayLibraryDetail.source.sourceId)} type="button">Edit source</button><button onClick={() => { setActiveChatSourceId(displayLibraryDetail.source.sourceId); setActiveView("query"); }} type="button">Use in query <AppIcon name="arrow" size={16} /></button></div>
+          </section>
+        ) : null}
+      </div>
+    );
+  }
 
-          <div className="library-grid">
-            {displayLibraryItems.length > 0 ? (
-              <>
-                <div className="library-list">
-                  {displayLibraryItems.map((item) => (
-                    <button
-                      className={`library-card ${
-                        currentLibrarySourceId === item.sourceId ? "library-card-active" : ""
-                      }`}
-                      key={item.sourceId}
-                      onClick={() => {
-                        setSelectedLibrarySourceId(item.sourceId);
-                        if (!useMockAi) {
-                          void loadRemoteLibraryDetail(item.sourceId);
-                        }
-                      }}
-                      type="button"
-                    >
-                      <div className="library-card-header">
-                        <div>
-                          <h3>{item.title || item.sourceId}</h3>
-                          <p>{item.sourceId}</p>
-                        </div>
-                        <span className="badge">{item.chunkCount} chunks</span>
-                      </div>
-                      <div className="library-meta">
-                        <span>{item.sourceType || "unknown type"}</span>
-                        <span>{new Date(item.latestIngestedAt).toLocaleString()}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="library-detail">
-                  {displayLibraryDetail ? (
-                    <>
-                      <div className="library-detail-card">
-                        <h3>{displayLibraryDetail.source.title || displayLibraryDetail.source.sourceId}</h3>
-                        <p>{displayLibraryDetail.source.sourceId}</p>
-                        <div className="library-meta">
-                          <span>{displayLibraryDetail.source.sourceType || "unknown type"}</span>
-                          <span>{new Date(displayLibraryDetail.source.latestIngestedAt).toLocaleString()}</span>
-                        </div>
-                        <div className="library-actions">
-                          <button
-                            className="ghost-button"
-                            onClick={() =>
-                              setActiveChatSourceId((current) =>
-                                current === displayLibraryDetail.source.sourceId
-                                  ? null
-                                  : displayLibraryDetail.source.sourceId
-                              )
-                            }
-                            type="button"
-                          >
-                            {effectiveActiveChatSourceId === displayLibraryDetail.source.sourceId
-                              ? "Clear chat scope"
-                              : "Use in chat"}
-                          </button>
-                          <button
-                            className="ghost-button"
-                            onClick={() => void loadSourceIntoForm(displayLibraryDetail.source.sourceId)}
-                            type="button"
-                          >
-                            Load in ingest form
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="library-detail-card">
-                        <h3>Guided prompts</h3>
-                        <div className="suggestion-list">
-                          {suggestedQuestions.map((suggestion) => (
-                            <button
-                              className="suggestion-button"
-                              key={suggestion}
-                              onClick={() => applySuggestedQuestion(suggestion)}
-                              type="button"
-                            >
-                              {suggestion}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="library-detail-card">
-                        <h3>Recent chunks</h3>
-                        <div className="detail-chunk-list">
-                          {displayLibraryDetail.chunks.map((chunk) => (
-                            <div className="detail-chunk-card" key={chunk.id}>
-                              <div className="detail-chunk-header">
-                                <strong>Chunk {chunk.chunkIndex + 1}</strong>
-                                <span>{new Date(chunk.createdAt).toLocaleString()}</span>
-                              </div>
-                              <p>
-                                {chunk.content.slice(0, 260)}
-                                {chunk.content.length > 260 ? "..." : ""}
-                              </p>
-                              <div>
-                                {chunk.entityNames.length > 0 ? (
-                                  chunk.entityNames.map((entityName) => (
-                                    <span className="source-chip" key={`${chunk.id}-${entityName}`}>
-                                      {entityName}
-                                    </span>
-                                  ))
-                                ) : (
-                                  <span className="ingest-muted">No entity names captured for this chunk.</span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="library-detail-card">
-                      <p>
-                        {libraryDetailPending
-                          ? "Loading source detail..."
-                          : "Select a source to inspect its chunk previews and suggested prompts."}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="library-empty">
-                <p>
-                  {useMockAi
-                    ? "The mock workspace is empty. Seed the demos or ingest a local document to start exploring."
-                    : libraryPending
-                      ? "Loading live library..."
-                      : "No live library items yet. Ingest a source and it will appear here."}
-                </p>
-              </div>
-            )}
-          </div>
-
-          {!useMockAi && libraryError ? (
-            <div className="footnote">
-              <div className="status-ribbon" data-variant="error">
-                {libraryError}
-              </div>
-            </div>
-          ) : null}
-
-          {!useMockAi && libraryDetailError ? (
-            <div className="footnote">
-              <div className="status-ribbon" data-variant="error">
-                {libraryDetailError}
-              </div>
-            </div>
-          ) : null}
+  function renderSchemaView() {
+    const inferredTypes = Array.from(new Set(graph.nodes.map((node) => node.type || "Entity")));
+    const schemaTypes = inferredTypes.length ? inferredTypes : ["Person", "Organization", "Project", "Concept"];
+    return (
+      <div className="schema-view">
+        <section className="schema-list">
+          <div className="section-bar"><h2>Node Entities</h2><button type="button"><AppIcon name="plus" size={18} /></button></div>
+          {schemaTypes.map((type, index) => <button className={index === 0 ? "is-active" : ""} key={type} type="button"><AppIcon name={type.toLowerCase().includes("person") ? "person" : "schema"} /><span><strong>{type}</strong><small>{graph.nodes.filter((node) => (node.type || "Entity") === type).length || "Simulated"} nodes</small></span></button>)}
         </section>
+        <section className="schema-canvas"><div className="schema-node"><AppIcon name="person" /><strong>{schemaTypes[0]}</strong><span>{graphStats.links} edges</span></div><div className="schema-node secondary"><AppIcon name="schema" /><strong>{schemaTypes[1] ?? "Organization"}</strong><span>related</span></div><svg aria-hidden="true"><line x1="35%" x2="65%" y1="50%" y2="50%" /></svg></section>
+        <aside className="schema-properties"><div className="section-bar"><h2>{schemaTypes[0]}</h2><span>Node</span></div><label><span>Property name</span><input readOnly value="id" /><small>UUID · Primary key</small></label><label><span>Property name</span><input readOnly value="name" /><small>String · Indexed</small></label><label><span>Property name</span><input readOnly value="type" /><small>Enum</small></label><button className="outline-button" type="button"><AppIcon name="plus" size={16} /> Add property</button><p>This schema is inferred from the active graph. Editing is simulated until a schema persistence API is connected.</p></aside>
+      </div>
+    );
+  }
+
+  function renderTracesView() {
+    return (
+      <div className="traces-view">
+        <div className="view-heading"><div><h1>Pipeline Traces</h1><p>Real-time inspection of retrieval augmented generation paths.</p></div><span className="health-chip"><i /> Live Feed Active</span></div>
+        <div className="trace-metrics"><div><span>Queries</span><strong>{traceQuestions.length}</strong></div><div><span>Evidence Returned</span><strong>{latestSources.length}</strong></div><div><span>Graph Nodes</span><strong>{graphStats.nodes}</strong></div><div><span>Error State</span><strong>{statusVariant === "error" ? "1" : "0"}</strong></div></div>
+        <div className="trace-layout">
+          <aside className="trace-list"><div className="section-bar"><h2>Recent Queries</h2><AppIcon name="history" size={18} /></div>{traceQuestions.length ? traceQuestions.map((message, index) => <article className={index === traceQuestions.length - 1 ? "is-active" : ""} key={message.id}><div><span>REQ-{message.id.slice(0, 8)}</span><strong>200 OK</strong></div><p>{message.content}</p><small>{retrievalMode} · {graphStats.nodes} nodes</small></article>) : <div className="source-empty"><p>No query traces yet. Ask a question in the Query Engine.</p></div>}</aside>
+          <section className="trace-detail"><div className="trace-detail-head"><div><span className="technical-label">Latest trace</span><h2>{traceQuestions.at(-1)?.content ?? "No query selected"}</h2></div><strong>{pending ? "Running" : "200 OK"}</strong></div><ol><li><span><AppIcon name="person" /></span><div><h3>User input received</h3><pre>{JSON.stringify({ source: effectiveActiveChatSourceId ?? "all", mode: retrievalMode }, null, 2)}</pre></div></li><li><span><AppIcon name="search" /></span><div><h3>Vector semantic search</h3><pre>{JSON.stringify(latestSources.slice(0, 3).map((source) => ({ source: source.sourceId, score: source.similarity.toFixed(2) })), null, 2)}</pre></div></li><li><span><AppIcon name="schema" /></span><div><h3>Graph traversal and expansion</h3><pre>{JSON.stringify({ nodes: graphStats.nodes, edges: graphStats.links, paths: graphStats.paths }, null, 2)}</pre></div></li><li><span><AppIcon name="spark" /></span><div><h3>Context synthesis</h3><p>{latestAssistantMessage?.content.slice(0, 320) ?? "Awaiting a completed query."}</p></div></li></ol></section>
+        </div>
+      </div>
+    );
+  }
+
+  function renderSettingsView() {
+    return (
+      <div className="settings-view">
+        <div className="view-heading"><div><h1>Workspace Configuration</h1><p>Manage AI behavior, fallback mode, and connected data services.</p></div></div>
+        <div className="settings-grid">
+          <section><div className="section-bar"><h2><AppIcon name="spark" /> AI Engine</h2></div><span className="technical-label">Inference path</span><div className="provider-options"><button className={!useMockAi ? "is-active" : ""} onClick={() => setUseMockAi(false)} type="button"><strong>Gemini + cloud stores</strong><span>Production connector path</span></button><button className={useMockAi ? "is-active" : ""} onClick={() => setUseMockAi(true)} type="button"><strong>Local simulation</strong><span>Private, free, deterministic</span></button></div><div className="settings-action-row"><button className="primary-button" onClick={() => { setUseMockAi(true); seedMockWorkspace(); }} type="button">Seed local workspace</button>{useMockAi ? <button className="outline-button" onClick={clearMockWorkspace} type="button">Clear local data</button> : null}</div></section>
+          <aside><div className="section-bar"><h2><AppIcon name="settings" /> Preferences</h2></div><label className="toggle-row"><span><strong>Graph animations</strong><small>Animate retrieved relationships.</small></span><input defaultChecked type="checkbox" /></label><label className="toggle-row"><span><strong>Technical trace</strong><small>Show retrieval metadata.</small></span><input defaultChecked type="checkbox" /></label><label className="toggle-row"><span><strong>Local fallback</strong><small>Keep mock workspace available.</small></span><input defaultChecked type="checkbox" /></label></aside>
+          <section className="connection-settings"><div className="section-bar"><h2><AppIcon name="database" /> Data Topology</h2></div><div className="connection-row"><span className="connection-mark">N4J</span><div><strong>Neo4j AuraDB</strong><small>Relationship graph</small></div><em>{useMockAi ? "Simulated" : "Connected"}</em></div><div className="connection-row"><span className="connection-mark supabase">SUP</span><div><strong>Supabase pgvector</strong><small>Semantic document store</small></div><em>{useMockAi ? "Simulated" : "Connected"}</em></div></section>
+          <section className="free-tools"><div className="section-bar"><h2>Free AI alternatives</h2></div>{freeAiToolkit.map((tool) => <Link href={tool.href} key={tool.name} rel="noreferrer" target="_blank"><div><strong>{tool.name}</strong><span>{tool.mode}</span></div><p>{tool.blurb}</p></Link>)}</section>
+        </div>
+      </div>
+    );
+  }
+
+  function renderActiveView() {
+    if (activeView === "query") return renderQueryView();
+    if (activeView === "sources") return renderSourcesView();
+    if (activeView === "schema") return renderSchemaView();
+    if (activeView === "traces") return renderTracesView();
+    if (activeView === "settings") return renderSettingsView();
+    return renderMapView();
+  }
+
+  return (
+    <main className="workspace-shell">
+      <aside className="side-nav">
+        <button className="brand-button" onClick={() => setActiveView("map")} type="button">
+          <Image alt="InsightGraph logo" height={42} priority src="/insightgraph-logo.jpeg" width={42} />
+          <span><strong>InsightGraph</strong><small>V0.2 AI-Native</small></span>
+        </button>
+        <button className="new-workspace-button" onClick={() => { setActiveView("sources"); setShowIngestPanel(true); }} type="button"><AppIcon name="plus" size={18} /> New Workspace</button>
+        <nav aria-label="Workspace navigation">
+          {navItems.map((item) => <button aria-current={activeView === item.id ? "page" : undefined} className={activeView === item.id ? "is-active" : ""} key={item.id} onClick={() => setActiveView(item.id)} type="button"><AppIcon name={item.icon} /><span>{item.label}</span></button>)}
+        </nav>
+        <div className="side-nav-footer">
+          <button onClick={() => setActiveView("settings")} type="button"><AppIcon name="document" size={18} /> Documentation</button>
+          <div className="user-chip"><span>EA</span><div><strong>Workspace Admin</strong><small>{useMockAi ? "Local simulation" : "Production mode"}</small></div></div>
+        </div>
+      </aside>
+      <section className="workspace-main">
+        <header className="top-nav">
+          <label className="workspace-search"><AppIcon name="search" size={18} /><input aria-label="Search current workspace" placeholder={activeView === "sources" ? "Search sources..." : "Search map..."} /></label>
+          <nav aria-label="Primary workspace views">
+            <button className={activeView === "map" ? "is-active" : ""} onClick={() => setActiveView("map")} type="button">Visualizer</button>
+            <button className={activeView === "query" ? "is-active" : ""} onClick={() => setActiveView("query")} type="button">Query Engine</button>
+            <button className={activeView === "traces" ? "is-active" : ""} onClick={() => setActiveView("traces")} type="button">History</button>
+          </nav>
+          <div className="top-actions">
+            <button className="deploy-button" onClick={() => setActiveView("map")} type="button"><AppIcon name="play" size={16} /> Deploy Map</button>
+            <span className={`mode-indicator ${useMockAi ? "is-mock" : ""}`}><i /> {useMockAi ? "Mock AI" : "Live AI"}</span>
+          </div>
+        </header>
+        <div className={`system-banner ${statusVariant === "error" ? "is-error" : ""}`}><span>{statusText}</span>{statusVariant === "error" && !useMockAi ? <button onClick={() => setUseMockAi(true)} type="button">Switch to Mock AI</button> : null}</div>
+        <div className="workspace-content">{renderActiveView()}</div>
       </section>
     </main>
   );
