@@ -52,10 +52,10 @@ export function KnowledgeMap({ graph }: KnowledgeMapProps) {
       {graph.nodes.length === 0 ? (
         <div className="empty-state">
           <div>
-            <h3>No graph yet</h3>
+            <h3>No graph trace yet</h3>
             <p>
-              Ask a question and this panel will render retrieved entities, relationship edges,
-              and any shortest paths found in Neo4j.
+              Ask about a named project, team, or person and this view will render the retrieved
+              entities, relationship edges, and shortest-path evidence.
             </p>
           </div>
         </div>
@@ -64,7 +64,9 @@ export function KnowledgeMap({ graph }: KnowledgeMapProps) {
           cooldownTicks={120}
           graphData={graph}
           height={dimensions.height}
-          linkColor={() => "rgba(15, 118, 110, 0.35)"}
+          linkColor={(link: { highlighted?: boolean }) =>
+            link.highlighted ? "rgba(89, 230, 167, 0.72)" : "rgba(79, 217, 255, 0.28)"
+          }
           linkDirectionalArrowLength={4}
           linkDirectionalArrowRelPos={1}
           linkLabel={(link: { relation?: string }) => link.relation || "RELATED"}
@@ -74,18 +76,18 @@ export function KnowledgeMap({ graph }: KnowledgeMapProps) {
             const typedNode = node as ForceNode;
             const label = typedNode.label || typedNode.id;
             const fontSize = typedNode.highlighted ? 14 / globalScale : 12 / globalScale;
-            context.font = `600 ${fontSize}px "Avenir Next", sans-serif`;
+            context.font = `600 ${fontSize}px Inter, ui-sans-serif, system-ui, sans-serif`;
             const textWidth = context.measureText(label).width;
             const backgroundPadding = 6 / globalScale;
             const x = typedNode.x || 0;
             const y = typedNode.y || 0;
 
-            context.fillStyle = typedNode.highlighted ? "#0f766e" : "#1f2937";
+            context.fillStyle = typedNode.highlighted ? "#59e6a7" : "#4fd9ff";
             context.beginPath();
             context.arc(x, y, typedNode.highlighted ? 6 : 4.6, 0, 2 * Math.PI, false);
             context.fill();
 
-            context.fillStyle = "rgba(255, 250, 240, 0.92)";
+            context.fillStyle = "rgba(8, 15, 24, 0.96)";
             context.fillRect(
               x + 8 / globalScale,
               y - fontSize,
@@ -93,7 +95,7 @@ export function KnowledgeMap({ graph }: KnowledgeMapProps) {
               fontSize + backgroundPadding * 1.2
             );
 
-            context.fillStyle = "#20160f";
+            context.fillStyle = "#ecf6ff";
             context.fillText(label, x + 8 / globalScale + backgroundPadding, y);
           }}
           nodeLabel={(node: ForceNode) => `${node.label}${node.type ? ` (${node.type})` : ""}`}

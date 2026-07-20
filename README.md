@@ -15,6 +15,10 @@ InsightGraph is a hybrid retrieval application that combines vector search in Su
   - Supabase `pgvector` similarity search for relevant chunks
   - Neo4j neighborhood and shortest-path traversal for relationship context
   - Gemini answer synthesis using both retrieval channels
+- A browser-local mock workspace that:
+  - stores mock ingests in `localStorage`
+  - performs deterministic chunking, extraction, embeddings, and graph building
+  - keeps the chat, library, ingestion, and map surfaces explorable without paid connectors
 - A Supabase Edge Function starter that:
   - chunks raw text
   - extracts entities and relationships with Gemini
@@ -95,10 +99,25 @@ supabase functions serve ingest-documents --env-file supabase/.env.local
 ## Exploring without Gemini quota
 
 - Turn on `Mock AI` in the dashboard header.
-- Use the demo source presets in the Ingestion Console to seed sample documents.
+- Use `Seed Local Demo` to load the built-in sample workspace instantly, or ingest your own text locally.
 - Ask questions in `hybrid`, `vector`, or `graph` mode to inspect how the UI behaves without live Gemini calls.
 
-Mock AI keeps the Supabase and Neo4j flow intact, but replaces live Gemini extraction, embeddings, and answer synthesis with deterministic local logic so the app remains explorable when quota is tight.
+Mock AI is now a fully local browser path. It does not depend on Gemini, Supabase, or Neo4j for ingestion or chat, which means the app remains demoable even when free-tier quotas are exhausted or external services are paused.
+
+## Free AI toolkit
+
+The redesigned dashboard links to a few practical free or local-friendly tools:
+
+- [Gemini API free tier](https://ai.google.dev/gemini-api/docs/pricing) for validating the real cloud connector flow
+- [Ollama](https://ollama.com/download) for running local chat and embedding models
+- [LM Studio](https://lmstudio.ai/download) for desktop-based local model testing
+- [Hugging Face Inference Providers](https://huggingface.co/docs/inference-providers/index) for free experimentation and backup provider comparisons
+
+These are best treated as complementary paths:
+
+- `Live AI` proves the end-to-end production connector story.
+- `Mock AI` keeps the interface explorable with deterministic local logic.
+- Local model tools such as Ollama or LM Studio are a good next step if you want a no-cost runtime that still uses real models.
 
 ## Required environment variables
 
@@ -163,6 +182,7 @@ npm run build
 - Keep all secrets in Vercel and Supabase environment variables.
 - Do not expose the Neo4j password or Supabase service role key to the client.
 - The dashboard includes a cooldown and pending-state UX to reduce Gemini free-tier rate limit issues.
+- The dashboard also includes a browser-local fallback mode so demos can continue when live connectors are unavailable.
 - The client pings the backend on load so the first request feels less abrupt during cold starts.
 - Before calling the app "ready", apply the Supabase migration and run the dashboard's Deployment Readiness check or hit `/api/readiness` directly.
 
@@ -187,7 +207,7 @@ npm run build
 - Retrieval quality does not yet have an automated evaluation suite.
 - Mock AI is intended for deterministic product exploration, not quality benchmarking.
 - Output quality and latency depend on the configured Gemini models and service quotas.
-- The complete live pipeline requires separately provisioned Supabase and Neo4j services.
+- The complete live pipeline still requires separately provisioned Supabase and Neo4j services.
 
 ## Security
 

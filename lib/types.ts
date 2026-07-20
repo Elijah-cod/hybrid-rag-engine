@@ -139,3 +139,18 @@ export type SourceLibraryDetail = {
   source: SourceLibraryItem;
   chunks: SourceChunkPreview[];
 };
+
+export type MockWorkspaceChunk = SourceChunkPreview & {
+  entities: Entity[];
+  triplets: Triplet[];
+  embedding: number[];
+};
+
+export type MockWorkspaceDocument = {
+  sourceId: string;
+  title: string | null;
+  sourceType: string | null;
+  text: string;
+  createdAt: string;
+  chunks: MockWorkspaceChunk[];
+};
