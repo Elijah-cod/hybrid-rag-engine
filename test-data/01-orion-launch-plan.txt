@@ -1,0 +1,9 @@
+Project Orion is the customer onboarding modernization program sponsored by CEO Amara Okafor. Project Orion depends on Identity Platform. Identity Platform depends on Atlas Authentication Service. Atlas Authentication Service is owned by Security Engineering Team.
+
+Launch Operations Team supports Project Orion. Launch Operations Team partners with Customer Experience Office. Customer Experience Office supports October Launch. Project Orion supports October Launch.
+
+Priya Njeri is responsible for Launch Operations Team. Priya Njeri reviews Orion Readiness Board. Orion Readiness Board reviews October Launch. Finance Planning Office supports Orion Readiness Board.
+
+Project Orion uses Event Stream Platform. Event Stream Platform is owned by Data Infrastructure Team. Data Infrastructure Team partners with Security Engineering Team. The October Launch depends on Project Orion and the Atlas Authentication Service.
+
+The success target for October Launch is a forty percent reduction in onboarding time and a twenty percent reduction in identity verification failures.

@@ -1,0 +1,7 @@
+The architecture register says Mercury Migration Program is owned by Platform Engineering Team. The finance register says Mercury Migration Program is owned by Finance Systems Team. Both records were approved during the same review cycle and no final owner was selected.
+
+Mercury Migration Program depends on Legacy Billing Platform. A later technical note says Mercury Migration Program depends on Aurora Ledger Service. Legacy Billing Platform is owned by Finance Systems Team. Aurora Ledger Service is owned by Platform Engineering Team.
+
+Risk Council reviews Mercury Migration Program. Nadia Hassan is responsible for Risk Council. Risk Council partners with Internal Audit Office.
+
+Polar Research Lab uses Ice Core Archive. Polar Research Lab partners with Southern Ocean Institute. These research organizations have no stated relationship to Mercury Migration Program, the billing systems, or the review teams.
