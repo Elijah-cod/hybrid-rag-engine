@@ -1,0 +1,11 @@
+record_id,region,subject,relation,object,relationship_statement,risk_level
+SC-001,East Africa,Nairobi Assembly Hub,SUPPORTS,Solar Sensor Program,"Nairobi Assembly Hub supports Solar Sensor Program.",medium
+SC-002,East Africa,Solar Sensor Program,DEPENDS_ON,Mombasa Logistics Corridor,"Solar Sensor Program depends on Mombasa Logistics Corridor.",high
+SC-003,East Africa,Kijani Components,PARTNERS_WITH,Nairobi Assembly Hub,"Kijani Components partners with Nairobi Assembly Hub.",low
+SC-004,East Africa,Mombasa Logistics Corridor,USES,Coastal Freight Network,"Mombasa Logistics Corridor uses Coastal Freight Network.",medium
+SC-005,East Africa,Procurement Operations Team,SUPPORTS,Kijani Components,"Procurement Operations Team supports Kijani Components.",medium
+SC-006,Global,Amina Otieno,REVIEWS,Supplier Risk Board,"Amina Otieno reviews Supplier Risk Board.",high
+SC-007,Global,Supplier Risk Board,REVIEWS,Solar Sensor Program,"Supplier Risk Board reviews Solar Sensor Program.",high
+SC-008,Europe,Berlin Distribution Center,DEPENDS_ON,Alpine Rail Network,"Berlin Distribution Center depends on Alpine Rail Network.",low
+SC-009,Europe,European Logistics Team,RESPONSIBLE_FOR,Berlin Distribution Center,"European Logistics Team is responsible for Berlin Distribution Center.",low
+SC-010,Global,Solar Sensor Program,OWNED_BY,Clean Energy Products Team,"Solar Sensor Program is owned by Clean Energy Products Team.",medium

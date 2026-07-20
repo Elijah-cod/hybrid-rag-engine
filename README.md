@@ -104,6 +104,10 @@ supabase functions serve ingest-documents --env-file supabase/.env.local
 
 Mock AI is now a fully local browser path. It does not depend on Gemini, Supabase, or Neo4j for ingestion or chat, which means the app remains demoable even when free-tier quotas are exhausted or external services are paused.
 
+## Test data pack
+
+The repository includes synthetic TXT, Markdown, JSON, CSV, and PDF fixtures for testing direct relationships, multi-hop paths, source scoping, conflicting claims, and disconnected entities. Start with [`test-data/README.md`](test-data/README.md) for the recommended upload order, suggested questions, and expected graph edges.
+
 ## Free AI toolkit
 
 The redesigned dashboard links to a few practical free or local-friendly tools:
